@@ -6,5 +6,11 @@ export default defineConfig({
   plugins: [react()],
   server: {
     host: true
+  },
+  build: {
+    target: 'esnext', // Required for advanced math/pdf libs
+  },
+  optimizeDeps: {
+    include: ['pdfjs-dist']
   }
 })

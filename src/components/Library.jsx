@@ -1,11 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-// Standard Vite import for worker as URL
-import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
-
-// Set worker source
-GlobalWorkerOptions.workerSrc = pdfWorker;
+// CDN Fallback for Worker - Most stable for Vercel/Vite deployments
+GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
 
 function Library() {
     // State
