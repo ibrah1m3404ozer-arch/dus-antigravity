@@ -74,37 +74,10 @@ function Library() {
         await loadData(); // Update generic list
     };
 
-    // Extract text from PDF
+    // Extract text from PDF (Temporarily Disabled for Stability)
     const extractTextFromPDF = async (file) => {
-        try {
-            // Dynamic import to prevent page crash on load
-            const pdfjs = await import('pdfjs-dist');
-            const { getDocument, GlobalWorkerOptions } = pdfjs;
-
-            // Set worker using reliable CDN for V5
-            if (!GlobalWorkerOptions.workerSrc) {
-                GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
-            }
-
-            const arrayBuffer = await file.arrayBuffer();
-            const pdf = await getDocument({ data: arrayBuffer }).promise;
-            let fullText = '';
-
-            // Limit to first 20 pages for performance if large
-            const maxPages = Math.min(pdf.numPages, 20);
-
-            for (let i = 1; i <= maxPages; i++) {
-                const page = await pdf.getPage(i);
-                const textContent = await page.getTextContent();
-                const pageText = textContent.items.map(item => item.str).join(' ');
-                fullText += pageText + '\n';
-            }
-
-            return fullText;
-        } catch (error) {
-            console.error("PDF Extraction Error:", error);
-            throw new Error("PDF metin okuma hatası: " + error.message);
-        }
+        // Placeholder to prevent crash
+        return "PDF metin okuma şu an bakım aşamasındadır. Lütfen daha sonra tekrar deneyin veya manuel özet ekleyin.";
     };
 
     // Handle Resource Upload
