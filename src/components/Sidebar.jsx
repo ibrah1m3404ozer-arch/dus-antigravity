@@ -91,6 +91,7 @@ function Sidebar() {
     const handleLogin = async () => {
         try {
             await loginWithGoogle();
+            window.location.reload(); // Reload to fetch fresh data for the new user
         } catch (error) {
             alert("Giriş yapılamadı: " + error.message);
         }
