@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
-// pdfjs-dist removed from top-level to prevent crash
+import { getAllArticles, saveArticle, deleteArticle, getFolders, createFolder, deleteFolder, savePearl, deletePearl, saveQuestion, deleteQuestion } from '../utils/db';
+import { summarizeText, generateFlashcards, generateQuiz } from '../services/aiService';
+import ResourceUploadModal from './ResourceUploadModal';
 
 function Library() {
     // State

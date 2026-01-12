@@ -7,10 +7,5 @@ export default defineConfig({
   server: {
     host: true
   },
-  build: {
-    target: 'esnext', // Required for advanced math/pdf libs
-  },
-  optimizeDeps: {
-    include: ['pdfjs-dist']
-  }
+
 })

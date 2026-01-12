@@ -3,10 +3,7 @@ import { FileText, Rss, TrendingUp, Sparkles, Upload, ExternalLink, RefreshCw, M
 import { getAllArticles, saveArticle, deleteArticle } from '../utils/db';
 import { summarizeText } from '../services/aiService';
 import ResourceUploadModal from './ResourceUploadModal';
-import * as pdfjsLib from 'pdfjs-dist';
-
-// Set worker source
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
+// pdfjs-dist removed - PDF text extraction temporarily disabled
 
 // Market Focused Feeds
 const RSS_FEEDS = [
@@ -132,16 +129,8 @@ function FinanceNewsHub() {
 
     // ... (PDF & AI Logic remains same) ...
     const extractTextFromPDF = async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + ' ';
-        }
-        return fullText;
+        // PDF text extraction temporarily disabled
+        return "PDF metin okuma şu an bakımdadır. Lütfen manuel özet girin.";
     };
 
     const handleSaveReport = async (data) => {
