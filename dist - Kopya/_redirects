@@ -1,0 +1,5 @@
+# Serve assets directly
+/assets/*  200
+
+# SPA fallback for everything else
+/*  /index.html  200
