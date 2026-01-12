@@ -15,7 +15,6 @@ import {
     getSupplements, saveSupplement,
     getSupplementLogs, saveSupplementLog,
     getNutritionLogs, saveNutritionLog,
-    getNutritionLogs, saveNutritionLog,
     initDB
 } from '../utils/db';
 import { syncAllFromFirestore, pushLocalToCloud } from '../utils/sync';
