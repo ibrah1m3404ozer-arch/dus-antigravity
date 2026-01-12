@@ -156,23 +156,12 @@ function Sidebar() {
         }
     };
 
-    // Determine which group should be auto-expanded based on current path
+    // Auto-expansion logic removed per user request (User prefers manual control)
+    /*
     React.useEffect(() => {
-        const currentPath = location.pathname;
-
-        MENU_GROUPS.forEach(group => {
-            const hasActiveItem = group.items.some(item => {
-                if (item.path === '/') {
-                    return currentPath === '/';
-                }
-                return currentPath.startsWith(item.path);
-            });
-
-            if (hasActiveItem && !expandedGroups.includes(group.id)) {
-                setExpandedGroups(prev => [...prev, group.id]);
-            }
-        });
+       // ... logic removed ...
     }, [location.pathname]);
+    */
 
     return (
         <>
@@ -209,11 +198,11 @@ function Sidebar() {
 
                 {/* Logo */}
                 <div className="p-6 flex-shrink-0 border-b border-border">
-                    <h1 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-emerald-400 to-yellow-400">
-                        LIFE-OS
+                    <h1 className="text-3xl font-black tracking-tighter bg-clip-text text-transparent bg-gradient-to-r from-blue-400 via-purple-400 to-emerald-400 select-none">
+                        ANTIGRAVITY
                     </h1>
-                    <p className="text-xs text-muted-foreground mt-1">
-                        Your Integrated System
+                    <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground font-bold ml-1">
+                        Nexus One
                     </p>
                 </div>
 
