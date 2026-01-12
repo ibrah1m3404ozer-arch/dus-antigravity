@@ -1,4 +1,5 @@
 import { openDB } from 'idb';
+import { syncItemToFirestore } from './sync';
 
 const DB_NAME = 'DUS_Antigravity_ULTIMATE_v1';
 const DB_VERSION = 3; // Bumped to 3
@@ -75,7 +76,9 @@ export const getTopicData = async (id) => {
 };
 export const updateTopicData = async (data) => {
     const db = await initDB();
-    return db.put(STORE_NAME, data);
+    await db.put(STORE_NAME, data);
+    await syncItemToFirestore(STORE_NAME, data);
+    return data;
 };
 
 // Image Helpers
@@ -101,6 +104,7 @@ export const saveTopicImage = async (topicId, imageFile, caption) => {
 
         topic.images.push(newImage);
         await db.put(STORE_NAME, topic);
+        await syncItemToFirestore(STORE_NAME, topic);
         return topic;
     } catch (error) {
         console.error('Error saving image:', error);

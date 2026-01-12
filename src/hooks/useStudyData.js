@@ -15,8 +15,11 @@ import {
     getSupplements, saveSupplement,
     getSupplementLogs, saveSupplementLog,
     getNutritionLogs, saveNutritionLog,
+    getNutritionLogs, saveNutritionLog,
     initDB
 } from '../utils/db';
+import { syncAllFromFirestore, pushLocalToCloud } from '../utils/sync';
+import { initAuth } from '../utils/firebaseConfig';
 
 const STORAGE_KEY = 'dus-antigravity-data';
 
@@ -28,6 +31,11 @@ export function useStudyData() {
     useEffect(() => {
         const initializeData = async () => {
             try {
+                // 0. Ensure Auth & Cloud Sync
+                await initAuth();
+                await syncAllFromFirestore();
+
+                // Legacy Migration
                 // Legacy Migration
                 const localStr = localStorage.getItem(STORAGE_KEY);
                 if (localStr) {
@@ -63,6 +71,8 @@ export function useStudyData() {
 
                     // Execute Seed
                     await Promise.all(batchSeed.map(t => updateTopicData(t)));
+                    // Push seeded data to cloud immediately
+                    await pushLocalToCloud('topics');
                     console.log(`✅ Seeding Complete: ${batchSeed.length} topics inserted.`);
 
                     // Reload seeded records
