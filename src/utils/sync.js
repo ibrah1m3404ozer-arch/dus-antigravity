@@ -69,20 +69,30 @@ export const syncAllFromFirestore = async () => {
             let count = 0;
 
             querySnapshot.forEach((doc) => {
-                const data = doc.data();
-                // Ensure ID is correct type/format if needed
-                tx.store.put(data);
-                count++;
+                try {
+                    const data = doc.data();
+                    // Ensure ID is present and correct
+                    if (data.id) {
+                        tx.store.put(data);
+                        count++;
+                    } else {
+                        console.warn(`⚠️ Skipped item in ${storeName} (No ID):`, doc.id);
+                    }
+                } catch (err) {
+                    console.error(`❌ Parse error in ${storeName}/${doc.id}:`, err);
+                }
             });
 
             await tx.done;
             if (count > 0) console.log(`⬇️ Downloaded ${count} items for ${storeName}`);
+            totalDownloaded += count;
 
         } catch (error) {
             console.warn(`Sync failed for ${storeName}:`, error);
         }
     }
-    console.log("✅ Cloud sync complete.");
+    console.log(`✅ Cloud sync complete. Total downloaded: ${totalDownloaded}`);
+    return totalDownloaded;
 };
 
 /**

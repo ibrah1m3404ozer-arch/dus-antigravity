@@ -258,41 +258,13 @@ function Sidebar() {
                                 </div>
                             </div>
                             <div className="flex items-center gap-1">
-                                {/* Upload Button */}
                                 <button
-                                    onClick={async () => {
-                                        if (!user) return;
-                                        try {
-                                            setIsSyncing(true);
-                                            const count = await forceSyncAllToCloud();
-                                            alert(`⬆️ Yükleme Başarılı!\nBuluta gönderilen kayıt: ${count}`);
-                                        } catch (e) { alert("Yükleme Hatası: " + e.message) }
-                                        finally { setIsSyncing(false); }
-                                    }}
+                                    onClick={handleSync}
                                     disabled={isSyncing}
-                                    className="text-blue-400 hover:text-blue-500 p-1"
-                                    title="Verileri Buluta Yükle (Telefonda Yapın)"
+                                    className={`text-blue-400 hover:text-blue-500 p-1 transition-transform ${isSyncing ? 'animate-spin' : ''}`}
+                                    title="Tüm Verileri Eşitle (Yükle & İndir)"
                                 >
-                                    <CloudUpload size={16} />
-                                </button>
-
-                                {/* Download Button */}
-                                <button
-                                    onClick={async () => {
-                                        if (!user) return;
-                                        try {
-                                            setIsSyncing(true);
-                                            const count = await syncAllFromFirestore();
-                                            alert(`⬇️ İndirme Başarılı!\nBuluttan gelen kayıt: ${count}`);
-                                            window.location.reload();
-                                        } catch (e) { alert("İndirme Hatası: " + e.message) }
-                                        finally { setIsSyncing(false); }
-                                    }}
-                                    disabled={isSyncing}
-                                    className="text-emerald-400 hover:text-emerald-500 p-1"
-                                    title="Verileri Buluttan İndir (Bilgisayarda Yapın)"
-                                >
-                                    <CloudDownload size={16} />
+                                    <RefreshCw size={16} />
                                 </button>
                                 <button onClick={logoutUser} className="text-red-400 hover:text-red-500 p-1" title="Çıkış Yap">
                                     <LogOut size={16} />
