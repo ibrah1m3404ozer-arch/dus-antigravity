@@ -157,15 +157,15 @@ export const saveArticle = async (article) => {
         }
 
         // Save metadata to Firestore (without Blobs)
-        const syncData = {
-            ...article,
-            fileBlob: undefined,
-            audioFile: undefined,
-            videoFile: undefined,
-            fileURL,
-            audioURL,
-            videoURL
-        };
+        const syncData = { ...article };
+        // Delete Blob fields (Firestore doesn't accept undefined)
+        delete syncData.fileBlob;
+        delete syncData.audioFile;
+        delete syncData.videoFile;
+        // Add download URLs
+        syncData.fileURL = fileURL;
+        syncData.audioURL = audioURL;
+        syncData.videoURL = videoURL;
 
         await saveLibraryArticle(syncData);
     } catch (error) {
