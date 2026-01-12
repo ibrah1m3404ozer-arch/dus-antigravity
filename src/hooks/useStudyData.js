@@ -102,7 +102,17 @@ export function useStudyData() {
                 setIsLoading(false);
             }
         };
+
+        // Listen for Global Sync Events (triggered by Sidebar auto-sync)
+        const handleDbSync = () => {
+            console.log("♻️ Data refresh triggered by Sync");
+            initializeData();
+        };
+
+        window.addEventListener('db-synced', handleDbSync);
         initializeData();
+
+        return () => window.removeEventListener('db-synced', handleDbSync);
     }, []);
 
     // ... Topic Helpers ... 

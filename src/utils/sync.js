@@ -108,6 +108,12 @@ export const syncAllFromFirestore = async (onProgress) => {
 
     if (onProgress) onProgress("Tamamlandı!");
     console.log(`✅ Cloud sync complete. Total downloaded: ${totalDownloaded}`);
+
+    // Trigger global refresh for hooks listening to data changes
+    if (totalDownloaded > 0) {
+        window.dispatchEvent(new Event('db-synced'));
+    }
+
     return totalDownloaded;
 };
 

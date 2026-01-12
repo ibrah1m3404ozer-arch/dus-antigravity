@@ -91,12 +91,38 @@ function Sidebar() {
         setIsMobileMenuOpen(false);
     };
 
+    // Auto-Sync Logic
+    React.useEffect(() => {
+        if (!user || user.isAnonymous) return;
+
+        // Initial Sync on Mount (Silent)
+        const runAutoSync = async () => {
+            try {
+                // Only pull changes, don't push automatically to avoid conflicts
+                // Push happens instantly on user action anyway
+                await syncAllFromFirestore((msg) => {
+                    // Only show status for significant events or failures
+                    // console.log("Auto-Sync:", msg);
+                });
+            } catch (e) {
+                console.warn("Auto-sync failed:", e);
+            }
+        };
+
+        // Run immediately then every 60 seconds
+        runAutoSync();
+        const intervalId = setInterval(runAutoSync, 60000);
+
+        return () => clearInterval(intervalId);
+    }, [user]);
+
     const handleLogin = async () => {
         try {
             await loginWithGoogle();
             window.location.reload();
         } catch (error) {
-            alert("Giriş yapılamadı: " + error.message);
+            setSyncMessage("Giriş Hatası!");
+            setTimeout(() => setSyncMessage(""), 3000);
         }
     };
 
@@ -107,21 +133,26 @@ function Sidebar() {
             setSyncMessage("Başlatılıyor...");
 
             // 1. Push
-            setSyncMessage("Veriler Gönderiliyor...");
+            setSyncMessage("Gönderiliyor...");
             const uploaded = await forceSyncAllToCloud();
 
             // 2. Pull
-            setSyncMessage("Veriler İndiriliyor...");
+            setSyncMessage("İndiriliyor...");
             const downloaded = await syncAllFromFirestore((msg) => setSyncMessage(msg));
 
-            alert(`✅ Senkronizasyon Tamamlandı!\n⬆️ Gönderilen: ${uploaded || 0} kayıt\n⬇️ İndirilen: ${downloaded || 0} kayıt`);
-            window.location.reload();
+            setSyncMessage(`✅ Tamamlandı (⬆️${uploaded} ⬇️${downloaded})`);
+
+            // Clear message after 3 seconds
+            setTimeout(() => setSyncMessage(""), 3000);
+
+            // No need to reload, event listener handles it!
+            // window.location.reload(); 
         } catch (error) {
             console.error(error);
-            alert("Senkronizasyon Hatası: " + error.message);
+            setSyncMessage("❌ Hata: " + error.message);
+            setTimeout(() => setSyncMessage(""), 5000);
         } finally {
             setIsSyncing(false);
-            setSyncMessage("");
         }
     };
 
