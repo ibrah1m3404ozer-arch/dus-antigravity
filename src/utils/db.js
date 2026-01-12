@@ -134,11 +134,69 @@ export const getAllArticles = async () => {
 };
 export const saveArticle = async (article) => {
     const db = await initDB();
-    return db.put(ARTICLE_STORE, article);
+    await db.put(ARTICLE_STORE, article);
+
+    // Sync to Firebase (if authenticated)
+    try {
+        const { saveLibraryArticle, storageHelpers } = await import('./firebaseDB');
+        const { auth } = await import('./firebaseConfig');
+
+        if (!auth.currentUser) return article;
+
+        // Upload files to Storage if present
+        let fileURL = null, audioURL = null, videoURL = null;
+
+        if (article.fileBlob instanceof Blob) {
+            fileURL = await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`);
+        }
+        if (article.audioFile instanceof Blob) {
+            audioURL = await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`);
+        }
+        if (article.videoFile instanceof Blob) {
+            videoURL = await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`);
+        }
+
+        // Save metadata to Firestore (without Blobs)
+        const syncData = {
+            ...article,
+            fileBlob: undefined,
+            audioFile: undefined,
+            videoFile: undefined,
+            fileURL,
+            audioURL,
+            videoURL
+        };
+
+        await saveLibraryArticle(syncData);
+    } catch (error) {
+        console.warn('Firebase sync failed:', error);
+    }
+
+    return article;
 };
 export const deleteArticle = async (id) => {
     const db = await initDB();
-    return db.delete(ARTICLE_STORE, id);
+    await db.delete(ARTICLE_STORE, id);
+
+    // Delete from Firebase
+    try {
+        const { deleteLibraryArticle, storageHelpers } = await import('./firebaseDB');
+        const { auth } = await import('./firebaseConfig');
+
+        if (!auth.currentUser) return;
+
+        // Delete files from Storage
+        await Promise.allSettled([
+            storageHelpers.deleteFile(`articles/${id}/file.pdf`),
+            storageHelpers.deleteFile(`articles/${id}/audio.mp3`),
+            storageHelpers.deleteFile(`articles/${id}/video.mp4`)
+        ]);
+
+        // Delete metadata from Firestore
+        await deleteLibraryArticle(id);
+    } catch (error) {
+        console.warn('Firebase delete failed:', error);
+    }
 };
 
 // Folder Helpers
@@ -146,6 +204,15 @@ export const createFolder = async (name) => {
     const db = await initDB();
     const newFolder = { id: Date.now().toString(), name, createdAt: new Date().toISOString() };
     await db.put(FOLDER_STORE, newFolder);
+
+    // Sync to Firebase
+    try {
+        const { saveLibraryFolder } = await import('./firebaseDB');
+        await saveLibraryFolder(newFolder);
+    } catch (error) {
+        console.warn('Firebase folder sync failed:', error);
+    }
+
     return newFolder;
 };
 export const getFolders = async () => {
@@ -154,13 +221,31 @@ export const getFolders = async () => {
 };
 export const deleteFolder = async (id) => {
     const db = await initDB();
-    return db.delete(FOLDER_STORE, id);
+    await db.delete(FOLDER_STORE, id);
+
+    // Delete from Firebase
+    try {
+        const { deleteLibraryFolder } = await import('./firebaseDB');
+        await deleteLibraryFolder(id);
+    } catch (error) {
+        console.warn('Firebase folder delete failed:', error);
+    }
 };
 
 // Pearl (Hap Bilgi) Helpers
 export const savePearl = async (pearl) => {
     const db = await initDB();
-    return db.put(PEARL_STORE, pearl);
+    await db.put(PEARL_STORE, pearl);
+
+    // Sync to Firebase
+    try {
+        const { saveLibraryPearl } = await import('./firebaseDB');
+        await saveLibraryPearl(pearl);
+    } catch (error) {
+        console.warn('Firebase pearl sync failed:', error);
+    }
+
+    return pearl;
 };
 export const getPearls = async () => {
     const db = await initDB();
@@ -177,7 +262,15 @@ export const togglePearlFavorite = async (id) => {
 };
 export const deletePearl = async (id) => {
     const db = await initDB();
-    return db.delete(PEARL_STORE, id);
+    await db.delete(PEARL_STORE, id);
+
+    // Delete from Firebase
+    try {
+        const { deleteLibraryPearl } = await import('./firebaseDB');
+        await deleteLibraryPearl(id);
+    } catch (error) {
+        console.warn('Firebase pearl delete failed:', error);
+    }
 };
 
 export const createPearlFolder = async (folder) => {
@@ -194,9 +287,19 @@ export const deletePearlFolder = async (id) => {
 };
 
 // Question Helpers
-export const saveQuestion = async (q) => {
+export const saveQuestion = async (question) => {
     const db = await initDB();
-    return db.put(QUESTION_STORE, q);
+    await db.put(QUESTION_STORE, question);
+
+    // Sync to Firebase
+    try {
+        const { saveLibraryQuestion } = await import('./firebaseDB');
+        await saveLibraryQuestion(question);
+    } catch (error) {
+        console.warn('Firebase question sync failed:', error);
+    }
+
+    return question;
 };
 export const getQuestions = async () => {
     const db = await initDB();
@@ -204,7 +307,15 @@ export const getQuestions = async () => {
 };
 export const deleteQuestion = async (id) => {
     const db = await initDB();
-    return db.delete(QUESTION_STORE, id);
+    await db.delete(QUESTION_STORE, id);
+
+    // Delete from Firebase
+    try {
+        const { deleteLibraryQuestion } = await import('./firebaseDB');
+        await deleteLibraryQuestion(id);
+    } catch (error) {
+        console.warn('Firebase question delete failed:', error);
+    }
 };
 
 // Exam Helpers

@@ -51,12 +51,60 @@ function Library() {
     }, []);
 
     const loadData = async () => {
-        const [allResources, allFolders] = await Promise.all([
-            getAllArticles(),
-            getFolders()
-        ]);
-        setResources(allResources || []);
-        setFolders(allFolders || []);
+        try {
+            // 1. Load from IndexedDB (local, fast)
+            const [localArticles, localFolders] = await Promise.all([
+                getAllArticles(),
+                getFolders()
+            ]);
+
+            // 2. Try to sync with Firebase (if authenticated)
+            try {
+                const { getAllLibraryArticles, getAllLibraryFolders } = await import('../utils/firebaseDB');
+                const { auth } = await import('../utils/firebaseConfig');
+
+                if (auth.currentUser && !auth.currentUser.isAnonymous) {
+                    const [cloudArticles, cloudFolders] = await Promise.all([
+                        getAllLibraryArticles(),
+                        getAllLibraryFolders()
+                    ]);
+
+                    // Merge: Cloud metadata + local Blobs
+                    const merged = mergeLibraryData(localArticles, cloudArticles);
+                    setResources(merged || []);
+                    setFolders(cloudFolders.length > 0 ? cloudFolders : localFolders || []);
+                } else {
+                    // Not authenticated - local only
+                    setResources(localArticles || []);
+                    setFolders(localFolders || []);
+                }
+            } catch (firebaseError) {
+                console.warn('Firebase sync failed:', firebaseError);
+                setResources(localArticles || []);
+                setFolders(localFolders || []);
+            }
+        } catch (error) {
+            console.error('loadData error:', error);
+            setResources([]);
+            setFolders([]);
+        }
+    };
+
+    // Merge helper
+    const mergeLibraryData = (local, cloud) => {
+        const map = new Map();
+        cloud.forEach(c => map.set(c.id, { ...c }));
+        local.forEach(l => {
+            if (map.has(l.id)) {
+                const existing = map.get(l.id);
+                existing.fileBlob = l.fileBlob || null;
+                existing.audioFile = l.audioFile || null;
+                existing.videoFile = l.videoFile || null;
+            } else {
+                map.set(l.id, l);
+            }
+        });
+        return Array.from(map.values());
     };
 
     // Initialize session state when resource is selected
