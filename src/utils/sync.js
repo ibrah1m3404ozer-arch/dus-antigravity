@@ -57,6 +57,7 @@ export const syncAllFromFirestore = async () => {
 
     console.log("🔄 Starting full sync from cloud...");
     const dbLocal = await initDB();
+    let totalDownloaded = 0; // Fix: Declare here
 
     for (const [storeName, collectionName] of Object.entries(COLLECTION_MAP)) {
         try {
