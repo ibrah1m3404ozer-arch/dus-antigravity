@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, onAuthStateChanged } from 'firebase/auth';
+import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 
 const firebaseConfig = {
@@ -16,13 +16,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const googleProvider = new GoogleAuthProvider();
 
 // Enable offline persistence
 enableIndexedDbPersistence(db).catch((err) => {
     console.warn('Persistence failed:', err.code);
 });
 
-// Auto sign-in anonymously
+// Auth Helpers
+export const loginWithGoogle = async () => {
+    try {
+        const result = await signInWithPopup(auth, googleProvider);
+        return result.user;
+    } catch (error) {
+        console.error("Login failed:", error);
+        throw error;
+    }
+};
+
+export const logoutUser = async () => {
+    await signOut(auth);
+    window.location.reload(); // Reload to reset state
+};
+
+// Auth State Observer
 let currentUser = null;
 
 const initAuth = async () => {
@@ -32,7 +49,9 @@ const initAuth = async () => {
                 currentUser = user;
                 resolve(user);
             } else {
-                // Sign in anonymously if not signed in
+                // DO NOT auto sign-in anonymously if we want explicit login
+                // But for backward compatibility/trial, we keep it OR make it optional.
+                // For now, let's keep anonymous fallback so app works immediately
                 const userCredential = await signInAnonymously(auth);
                 currentUser = userCredential.user;
                 resolve(currentUser);

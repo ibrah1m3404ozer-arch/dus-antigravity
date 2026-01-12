@@ -3,8 +3,10 @@ import { NavLink, useLocation } from 'react-router-dom';
 import {
     LayoutDashboard, BookOpen, Timer, Brain, FileJson, TrendingUp, Library,
     Dumbbell, Pill, Utensils, Wallet, LineChart, Settings,
-    ChevronDown, ChevronRight, Activity, Sparkles, Menu, X
+    ChevronDown, ChevronRight, Activity, Sparkles, Menu, X,
+    LogIn, LogOut, User
 } from 'lucide-react';
+import { auth, loginWithGoogle, logoutUser } from '../utils/firebaseConfig';
 
 // Menu Groups Configuration
 const MENU_GROUPS = [
@@ -64,6 +66,15 @@ function Sidebar() {
     const location = useLocation();
     const [expandedGroups, setExpandedGroups] = useState(['dus']); // DUS open by default
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [user, setUser] = useState(auth.currentUser);
+
+    // Listen to auth changes
+    React.useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged((u) => {
+            setUser(u);
+        });
+        return () => unsubscribe();
+    }, []);
 
     const toggleGroup = (groupId) => {
         setExpandedGroups(prev =>
@@ -75,6 +86,14 @@ function Sidebar() {
 
     const closeMobileMenu = () => {
         setIsMobileMenuOpen(false);
+    };
+
+    const handleLogin = async () => {
+        try {
+            await loginWithGoogle();
+        } catch (error) {
+            alert("Giriş yapılamadı: " + error.message);
+        }
     };
 
     // Determine which group should be auto-expanded based on current path
@@ -198,8 +217,35 @@ function Sidebar() {
                     })}
                 </nav>
 
-                {/* Footer */}
-                <div className="p-4 border-t border-border flex-shrink-0">
+                {/* Footer - Login/User Section */}
+                <div className="p-4 border-t border-border flex-shrink-0 space-y-3">
+                    {user && !user.isAnonymous ? (
+                        <div className="flex items-center justify-between p-2 rounded-lg bg-muted/50">
+                            <div className="flex items-center gap-2 overflow-hidden">
+                                {user.photoURL ? (
+                                    <img src={user.photoURL} alt="User" className="w-8 h-8 rounded-full" />
+                                ) : (
+                                    <User size={20} className="text-muted-foreground" />
+                                )}
+                                <div className="flex flex-col truncate">
+                                    <span className="text-xs font-medium truncate">{user.displayName}</span>
+                                    <span className="text-[10px] text-muted-foreground truncate">Online</span>
+                                </div>
+                            </div>
+                            <button onClick={logoutUser} className="text-red-400 hover:text-red-500 p-1" title="Çıkış Yap">
+                                <LogOut size={16} />
+                            </button>
+                        </div>
+                    ) : (
+                        <button
+                            onClick={handleLogin}
+                            className="w-full flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg text-sm font-medium transition-colors shadow-sm"
+                        >
+                            <LogIn size={16} />
+                            <span>Google ile Giriş Yap</span>
+                        </button>
+                    )}
+
                     <div className="bg-gradient-to-r from-blue-500/10 via-emerald-500/10 to-yellow-500/10 rounded-lg p-3 border border-primary/20">
                         <p className="text-xs text-muted-foreground text-center font-medium">
                             🚀 Your journey to excellence
