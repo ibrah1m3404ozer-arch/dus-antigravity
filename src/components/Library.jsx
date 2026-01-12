@@ -1,14 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
-// Correct Vite import for PDF.js worker
-import 'pdfjs-dist/build/pdf.worker.min.mjs';
 import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
+// Standard Vite import for worker as URL
+import pdfWorker from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 
-// Explicitly set worker source for Vite
-GlobalWorkerOptions.workerSrc = new URL(
-    'pdfjs-dist/build/pdf.worker.min.mjs',
-    import.meta.url
-).toString();
+// Set worker source
+GlobalWorkerOptions.workerSrc = pdfWorker;
 
 function Library() {
     // State
