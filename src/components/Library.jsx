@@ -1,19 +1,14 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
-import { getDocument, GlobalWorkerOptions } from 'pdfjs-dist';
-import { summarizeText, generateFlashcards, generateQuiz } from '../services/aiService';
-import { saveArticle, getAllArticles, deleteArticle, createFolder, getFolders, deleteFolder, savePearl, saveQuestion, deletePearl, deleteQuestion } from '../utils/db';
-import ResourceUploadModal from './ResourceUploadModal';
+// Correct Vite import for PDF.js worker
+import 'pdfjs-dist/build/pdf.worker.min.mjs';
+import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
 
-// PDF.js worker setup
-try {
-    GlobalWorkerOptions.workerSrc = new URL(
-        'pdfjs-dist/build/pdf.worker.min.mjs',
-        import.meta.url,
-    ).toString();
-} catch (e) {
-    console.error("PDF Worker initialization failed:", e);
-}
+// Explicitly set worker source for Vite
+GlobalWorkerOptions.workerSrc = new URL(
+    'pdfjs-dist/build/pdf.worker.min.mjs',
+    import.meta.url
+).toString();
 
 function Library() {
     // State
