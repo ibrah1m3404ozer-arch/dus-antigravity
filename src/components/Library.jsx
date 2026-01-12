@@ -89,18 +89,26 @@ function Library() {
 
     // Extract text from PDF
     const extractTextFromPDF = async (file) => {
-        const arrayBuffer = await file.arrayBuffer();
-        const pdf = await getDocument({ data: arrayBuffer }).promise;
-        let fullText = '';
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
 
-        for (let i = 1; i <= pdf.numPages; i++) {
-            const page = await pdf.getPage(i);
-            const textContent = await page.getTextContent();
-            const pageText = textContent.items.map(item => item.str).join(' ');
-            fullText += pageText + '\n';
+            // Limit to first 20 pages for performance if large
+            const maxPages = Math.min(pdf.numPages, 20);
+
+            for (let i = 1; i <= maxPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+
+            return fullText;
+        } catch (error) {
+            console.error("PDF Extraction Error:", error);
+            throw new Error("PDF metin okuma hatası: " + error.message);
         }
-
-        return fullText;
     };
 
     // Handle Resource Upload
@@ -110,9 +118,15 @@ function Library() {
         setUploadStatus('PDF işleniyor...');
 
         try {
-            const text = await extractTextFromPDF(resourceData.pdfFile);
-            if (!text || text.trim().length < 50) {
-                throw new Error('PDF boş veya okunamadı.');
+            let text = '';
+            // Only attempt extraction if it's a PDF
+            if (resourceData.pdfFile) {
+                text = await extractTextFromPDF(resourceData.pdfFile);
+                if (!text || text.trim().length < 10) {
+                    // Fallback for scanned PDFs or images
+                    text = "Bu PDF'den metin okunamadı (Taranmış belge olabilir).";
+                    console.warn("PDF text extraction empty");
+                }
             }
 
             setUploadStatus('Kaydediliyor...');
@@ -122,7 +136,7 @@ function Library() {
                 folderId: currentFolderId,
                 title: resourceData.title,
                 content: text,
-                fileBlob: resourceData.pdfFile,
+                fileBlob: resourceData.pdfFile, // IndexedDB handles Blobs well usually
                 category: resourceData.category,
                 manualSummary: resourceData.manualSummary || '',
                 audioFile: resourceData.audioFile || null,
@@ -136,6 +150,7 @@ function Library() {
             setUploadStatus('✅ Kaynak eklendi!');
             await loadData();
         } catch (error) {
+            console.error(error);
             setUploadStatus('❌ Hata: ' + error.message);
             alert('Hata: ' + error.message);
         } finally {
@@ -358,11 +373,24 @@ function Library() {
 
     // Helpers for Rendering
     const renderPDFPreview = () => {
-        if (!selectedResource?.fileBlob) {
-            return <div className="text-center text-muted-foreground py-8">PDF önizlemesi mevcut değil</div>;
+        // Safety check to prevent crashing if fileBlob is missing or invalid
+        if (!selectedResource?.fileBlob || !(selectedResource.fileBlob instanceof Blob)) {
+            return (
+                <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center bg-card/50 rounded-lg border border-dashed border-border">
+                    <FileText size={48} className="mb-4 opacity-50" />
+                    <p className="font-medium">PDF Görüntülenemiyor</p>
+                    <p className="text-sm mt-2 opacity-75">Dosya hasarlı veya yüklenirken bir sorun oluştu.</p>
+                </div>
+            );
         }
-        const url = URL.createObjectURL(selectedResource.fileBlob);
-        return <iframe src={url} className="w-full h-full rounded-lg" title="PDF Viewer" />;
+
+        try {
+            const url = URL.createObjectURL(selectedResource.fileBlob);
+            return <iframe src={url} className="w-full h-full rounded-lg" title="PDF Viewer" />;
+        } catch (e) {
+            console.error("Blob URL Error:", e);
+            return <div className="text-center p-4">Hata: Dosya açılamadı.</div>;
+        }
     };
 
     const activeSet = quizSets.find(s => s.id === activeSetId);
