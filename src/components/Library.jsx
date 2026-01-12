@@ -3,6 +3,10 @@ import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain
 import { getAllArticles, saveArticle, deleteArticle, getFolders, createFolder, deleteFolder, savePearl, deletePearl, saveQuestion, deleteQuestion } from '../utils/db';
 import { summarizeText, generateFlashcards, generateQuiz } from '../services/aiService';
 import ResourceUploadModal from './ResourceUploadModal';
+import * as pdfjsLib from 'pdfjs-dist';
+
+// Using CDN worker for maximum stability
+pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@4.0.379/build/pdf.worker.min.mjs`;
 
 function Library() {
     // State
@@ -76,10 +80,34 @@ function Library() {
         await loadData(); // Update generic list
     };
 
-    // Extract text from PDF (Temporarily Disabled for Stability)
+    // Extract text from PDF
     const extractTextFromPDF = async (file) => {
-        // Placeholder to prevent crash
-        return "PDF metin okuma şu an bakım aşamasındadır. Lütfen daha sonra tekrar deneyin veya manuel özet ekleyin.";
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            let fullText = '';
+
+            // Process up to 30 pages (balance between completeness and performance)
+            const maxPages = Math.min(pdf.numPages, 30);
+
+            for (let i = 1; i <= maxPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n\n';
+            }
+
+            // Validate extraction
+            if (!fullText.trim() || fullText.length < 50) {
+                console.warn('PDF text extraction resulted in very short text');
+                return 'PDF içeriği okunamadı (muhtemelen taranmış görsel). Lütfen manuel özet ekleyin.';
+            }
+
+            return fullText.trim();
+        } catch (error) {
+            console.error('PDF extraction error:', error);
+            throw new Error(`PDF okuma hatası: ${error.message}`);
+        }
     };
 
     // Handle Resource Upload
@@ -170,6 +198,13 @@ function Library() {
     // AI Functions
     const handleSummarize = async () => {
         if (!selectedResource) return;
+
+        // Validate content exists and is meaningful
+        if (!selectedResource.content || selectedResource.content.length < 100) {
+            alert('❌ PDF içeriği çok kısa veya okunamadı!\n\nAI özet oluşturmak için yeterli metin bulunamadı. Lütfen:\n\n1. Farklı bir PDF deneyin\n2. Manuel özet ekleyin (Medya sekmesi)');
+            return;
+        }
+
         const apiKey = localStorage.getItem('gemini_api_key');
         if (!apiKey) {
             alert('Lütfen Ayarlar sayfasından Google Gemini API anahtarınızı girin.');
@@ -190,6 +225,12 @@ function Library() {
 
     const handleGenerateFlashcards = async () => {
         if (!selectedResource) return;
+
+        if (!selectedResource.content || selectedResource.content.length < 100) {
+            alert('❌ PDF içeriği çok kısa!\n\nHap bilgi oluşturmak için yeterli metin bulunamadı.');
+            return;
+        }
+
         const apiKey = localStorage.getItem('gemini_api_key');
         if (!apiKey) {
             alert('Lütfen Ayarlar sayfasından Google Gemini API anahtarınızı girin.');
@@ -199,7 +240,6 @@ function Library() {
         setAiLoading(true);
         try {
             const newCards = await generateFlashcards(selectedResource.content, apiKey, flashcardCount);
-            // Append with unique IDs and saved status
             const enrichedCards = newCards.map(c => ({
                 ...c,
                 id: Date.now().toString() + Math.random().toString().slice(2, 8),
@@ -209,7 +249,6 @@ function Library() {
             const updatedFlashcards = [...flashcards, ...enrichedCards];
             setFlashcards(updatedFlashcards);
             await persistResourceState({ generatedFlashcards: updatedFlashcards });
-
         } catch (error) {
             alert('Hap bilgiler oluşturulamadı: ' + error.message);
         } finally {
@@ -219,6 +258,12 @@ function Library() {
 
     const handleGenerateQuestions = async () => {
         if (!selectedResource) return;
+
+        if (!selectedResource.content || selectedResource.content.length < 100) {
+            alert('❌ PDF içeriği çok kısa!\n\nTest soruları oluşturmak için yeterli metin bulunamadı.');
+            return;
+        }
+
         const apiKey = localStorage.getItem('gemini_api_key');
         if (!apiKey) {
             alert('Lütfen Ayarlar sayfasından Google Gemini API anahtarınızı girin.');
@@ -228,8 +273,6 @@ function Library() {
         setAiLoading(true);
         try {
             const quizData = await generateQuiz(selectedResource.content, apiKey, 'Zor, Klinik Vaka', quizCount);
-
-            // Assign IDs to questions
             const enrichedQuiz = quizData.map(q => ({
                 ...q,
                 id: Date.now().toString() + Math.random().toString().slice(2, 8),
@@ -247,7 +290,6 @@ function Library() {
             setQuizSets(updatedSets);
             setActiveSetId(newSet.id);
             await persistResourceState({ generatedQuizSets: updatedSets });
-
         } catch (error) {
             alert('Sorular oluşturulamadı: ' + error.message);
         } finally {
