@@ -4,7 +4,7 @@ import {
     LayoutDashboard, BookOpen, Timer, Brain, FileJson, TrendingUp, Library,
     Dumbbell, Pill, Utensils, Wallet, LineChart, Settings,
     ChevronDown, ChevronRight, Activity, Sparkles, Menu, X,
-    LogIn, LogOut, User, RefreshCw
+    LogIn, LogOut, User, RefreshCw, CloudUpload, CloudDownload
 } from 'lucide-react';
 import { auth, loginWithGoogle, logoutUser } from '../utils/firebaseConfig';
 import { syncAllFromFirestore, forceSyncAllToCloud } from '../utils/sync';
