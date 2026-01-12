@@ -78,20 +78,18 @@ export function useStudyData() {
                     dbRecords = await getAllTopicData();
                 }
 
-                const dbMap = new Map(dbRecords.map(item => [item.id, item]));
+                // Create Map with String keys to avoid Type mismatch
+                const dbMap = new Map(dbRecords.map(item => [String(item.id), item]));
 
                 const mergedData = INITIAL_CURRICULUM.map(group => ({
                     ...group,
                     subjects: group.subjects.map(subject => ({
                         ...subject,
                         topics: subject.topics.map(topic => {
-                            const saved = dbMap.get(topic.id);
+                            const saved = dbMap.get(String(topic.id));
                             return saved ? {
-                                ...topic,
-                                status: saved.status || topic.status,
-                                note: saved.note || topic.note,
-                                images: saved.images || [],
-                                questionCount: saved.questionCount || topic.questionCount
+                                ...topic, // Keep static data (title etc)
+                                ...saved // Overwrite with dynamic data (status, note, images)
                             } : { ...topic, images: [] };
                         })
                     }))
