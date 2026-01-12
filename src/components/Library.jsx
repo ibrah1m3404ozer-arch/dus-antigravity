@@ -1,8 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
-import { GlobalWorkerOptions, getDocument } from 'pdfjs-dist';
-// CDN Fallback for Worker - Most stable for Vercel/Vite deployments
-GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
+// pdfjs-dist removed from top-level to prevent crash
 
 function Library() {
     // State
@@ -79,6 +77,15 @@ function Library() {
     // Extract text from PDF
     const extractTextFromPDF = async (file) => {
         try {
+            // Dynamic import to prevent page crash on load
+            const pdfjs = await import('pdfjs-dist');
+            const { getDocument, GlobalWorkerOptions } = pdfjs;
+
+            // Set worker using reliable CDN for V5
+            if (!GlobalWorkerOptions.workerSrc) {
+                GlobalWorkerOptions.workerSrc = `https://unpkg.com/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs`;
+            }
+
             const arrayBuffer = await file.arrayBuffer();
             const pdf = await getDocument({ data: arrayBuffer }).promise;
             let fullText = '';
