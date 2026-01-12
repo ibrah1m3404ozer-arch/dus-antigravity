@@ -51,20 +51,34 @@ export const syncItemToFirestore = async (storeName, item) => {
  * Downloads all data from Firestore and updates IndexedDB
  * Should be called on app start
  */
-export const syncAllFromFirestore = async () => {
+export const syncAllFromFirestore = async (onProgress) => {
     const userId = getUserId();
     if (!userId) return;
 
+    if (onProgress) onProgress("Buluta Bağlanılıyor...");
     console.log("🔄 Starting full sync from cloud...");
-    const dbLocal = await initDB();
-    let totalDownloaded = 0; // Fix: Declare here
 
-    for (const [storeName, collectionName] of Object.entries(COLLECTION_MAP)) {
+    // Cloud connection warmup
+    try {
+        await getDocs(query(collection(db, `users/${userId}/topics`), limit(1)));
+    } catch (e) { /* ignore connection check */ }
+
+    const dbLocal = await initDB();
+    let totalDownloaded = 0;
+
+    const stores = Object.entries(COLLECTION_MAP);
+    let completedStores = 0;
+
+    for (const [storeName, collectionName] of stores) {
+        if (onProgress) onProgress(`${storeName} taranıyor... (%${Math.round((completedStores / stores.length) * 100)})`);
         try {
             const q = query(collection(db, `users/${userId}/${collectionName}`));
             const querySnapshot = await getDocs(q);
 
-            if (querySnapshot.empty) continue;
+            if (querySnapshot.empty) {
+                completedStores++;
+                continue;
+            }
 
             const tx = dbLocal.transaction(storeName, 'readwrite');
             let count = 0;
@@ -72,26 +86,27 @@ export const syncAllFromFirestore = async () => {
             querySnapshot.forEach((doc) => {
                 try {
                     const data = doc.data();
-                    // Ensure ID is present and correct
                     if (data.id) {
                         tx.store.put(data);
                         count++;
-                    } else {
-                        console.warn(`⚠️ Skipped item in ${storeName} (No ID):`, doc.id);
                     }
-                } catch (err) {
-                    console.error(`❌ Parse error in ${storeName}/${doc.id}:`, err);
-                }
+                } catch (err) { }
             });
 
             await tx.done;
-            if (count > 0) console.log(`⬇️ Downloaded ${count} items for ${storeName}`);
+            if (count > 0) {
+                console.log(`⬇️ Downloaded ${count} items for ${storeName}`);
+                if (onProgress) onProgress(`${count} ${storeName} indirildi`);
+            }
             totalDownloaded += count;
 
         } catch (error) {
             console.warn(`Sync failed for ${storeName}:`, error);
         }
+        completedStores++;
     }
+
+    if (onProgress) onProgress("Tamamlandı!");
     console.log(`✅ Cloud sync complete. Total downloaded: ${totalDownloaded}`);
     return totalDownloaded;
 };

@@ -69,6 +69,7 @@ function Sidebar() {
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [user, setUser] = useState(auth.currentUser);
     const [isSyncing, setIsSyncing] = useState(false);
+    const [syncMessage, setSyncMessage] = useState("");
 
     // Listen to auth changes
     React.useEffect(() => {
@@ -103,10 +104,15 @@ function Sidebar() {
         if (!user) return;
         try {
             setIsSyncing(true);
-            // 1. Push local changes to cloud
+            setSyncMessage("Başlatılıyor...");
+
+            // 1. Push
+            setSyncMessage("Veriler Gönderiliyor...");
             const uploaded = await forceSyncAllToCloud();
-            // 2. Pull external changes from cloud
-            const downloaded = await syncAllFromFirestore();
+
+            // 2. Pull
+            setSyncMessage("Veriler İndiriliyor...");
+            const downloaded = await syncAllFromFirestore((msg) => setSyncMessage(msg));
 
             alert(`✅ Senkronizasyon Tamamlandı!\n⬆️ Gönderilen: ${uploaded || 0} kayıt\n⬇️ İndirilen: ${downloaded || 0} kayıt`);
             window.location.reload();
@@ -115,6 +121,7 @@ function Sidebar() {
             alert("Senkronizasyon Hatası: " + error.message);
         } finally {
             setIsSyncing(false);
+            setSyncMessage("");
         }
     };
 
