@@ -104,11 +104,11 @@ function Sidebar() {
         try {
             setIsSyncing(true);
             // 1. Push local changes to cloud
-            await forceSyncAllToCloud();
+            const uploaded = await forceSyncAllToCloud();
             // 2. Pull external changes from cloud
-            await syncAllFromFirestore();
+            const downloaded = await syncAllFromFirestore();
 
-            alert("✅ Senkronizasyon Tamamlandı!");
+            alert(`✅ Senkronizasyon Tamamlandı!\n⬆️ Gönderilen: ${uploaded || 0} kayıt\n⬇️ İndirilen: ${downloaded || 0} kayıt`);
             window.location.reload();
         } catch (error) {
             console.error(error);
@@ -251,7 +251,10 @@ function Sidebar() {
                                 )}
                                 <div className="flex flex-col truncate">
                                     <span className="text-xs font-medium truncate">{user.displayName}</span>
-                                    <span className="text-[10px] text-muted-foreground truncate">Online</span>
+                                    {/* DEBUG ID DISPLAY */}
+                                    <span className="text-[10px] text-muted-foreground truncate font-mono">
+                                        ID: {user.uid.slice(0, 6)}...
+                                    </span>
                                 </div>
                             </div>
                             <div className="flex items-center gap-1">
