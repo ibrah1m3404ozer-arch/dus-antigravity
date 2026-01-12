@@ -1,4 +1,6 @@
 import { openDB } from 'idb';
+import { saveLibraryArticle, deleteLibraryArticle, saveLibraryFolder, deleteLibraryFolder, saveLibraryPearl, deleteLibraryPearl, saveLibraryQuestion, deleteLibraryQuestion, storageHelpers } from './firebaseDB';
+import { auth } from './firebaseConfig';
 import { syncItemToFirestore } from './sync';
 
 const DB_NAME = 'DUS_Antigravity_ULTIMATE_v1';
@@ -135,68 +137,56 @@ export const getAllArticles = async () => {
 export const saveArticle = async (article) => {
     const db = await initDB();
     await db.put(ARTICLE_STORE, article);
+    if (!auth.currentUser) return article;
 
-    // Sync to Firebase (if authenticated)
-    try {
-        const { saveLibraryArticle, storageHelpers } = await import('./firebaseDB');
-        const { auth } = await import('./firebaseConfig');
+    // Upload files to Storage if present
+    let fileURL = null, audioURL = null, videoURL = null;
 
-        if (!auth.currentUser) return article;
-
-        // Upload files to Storage if present
-        let fileURL = null, audioURL = null, videoURL = null;
-
-        if (article.fileBlob instanceof Blob) {
-            fileURL = await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`);
-        }
-        if (article.audioFile instanceof Blob) {
-            audioURL = await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`);
-        }
-        if (article.videoFile instanceof Blob) {
-            videoURL = await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`);
-        }
-
-        // Save metadata to Firestore (without Blobs)
-        const syncData = { ...article };
-        // Delete Blob fields (Firestore doesn't accept undefined)
-        delete syncData.fileBlob;
-        delete syncData.audioFile;
-        delete syncData.videoFile;
-        // Add download URLs
-        syncData.fileURL = fileURL;
-        syncData.audioURL = audioURL;
-        syncData.videoURL = videoURL;
-
-        await saveLibraryArticle(syncData);
-    } catch (error) {
-        console.warn('Firebase sync failed:', error);
+    if (article.fileBlob instanceof Blob) {
+        fileURL = await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`);
+    }
+    if (article.audioFile instanceof Blob) {
+        audioURL = await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`);
+    }
+    if (article.videoFile instanceof Blob) {
+        videoURL = await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`);
     }
 
-    return article;
+    // Save metadata to Firestore (without Blobs)
+    const syncData = { ...article };
+    // Delete Blob fields (Firestore doesn't accept undefined)
+    delete syncData.fileBlob;
+    delete syncData.audioFile;
+    delete syncData.videoFile;
+    // Add download URLs
+    syncData.fileURL = fileURL;
+    syncData.audioURL = audioURL;
+    syncData.videoURL = videoURL;
+
+    await saveLibraryArticle(syncData);
+} catch (error) {
+    console.warn('Firebase sync failed:', error);
+}
+
+return article;
 };
 export const deleteArticle = async (id) => {
     const db = await initDB();
     await db.delete(ARTICLE_STORE, id);
+    if (!auth.currentUser) return;
 
-    // Delete from Firebase
-    try {
-        const { deleteLibraryArticle, storageHelpers } = await import('./firebaseDB');
-        const { auth } = await import('./firebaseConfig');
+    // Delete files from Storage
+    await Promise.allSettled([
+        storageHelpers.deleteFile(`articles/${id}/file.pdf`),
+        storageHelpers.deleteFile(`articles/${id}/audio.mp3`),
+        storageHelpers.deleteFile(`articles/${id}/video.mp4`)
+    ]);
 
-        if (!auth.currentUser) return;
-
-        // Delete files from Storage
-        await Promise.allSettled([
-            storageHelpers.deleteFile(`articles/${id}/file.pdf`),
-            storageHelpers.deleteFile(`articles/${id}/audio.mp3`),
-            storageHelpers.deleteFile(`articles/${id}/video.mp4`)
-        ]);
-
-        // Delete metadata from Firestore
-        await deleteLibraryArticle(id);
-    } catch (error) {
-        console.warn('Firebase delete failed:', error);
-    }
+    // Delete metadata from Firestore
+    await deleteLibraryArticle(id);
+} catch (error) {
+    console.warn('Firebase delete failed:', error);
+}
 };
 
 // Folder Helpers
