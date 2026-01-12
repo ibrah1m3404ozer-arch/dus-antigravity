@@ -119,3 +119,23 @@ export const pushLocalToCloud = async (storeName) => {
         console.log(`⬆️ Pushed ${batchCount} local items from ${storeName} to cloud`);
     }
 };
+
+/**
+ * Force pushes ALL local data stores to Cloud
+ */
+export const forceSyncAllToCloud = async () => {
+    const userId = getUserId();
+    if (!userId) {
+        alert("Senkronizasyon için giriş yapmalısınız!");
+        return;
+    }
+
+    console.log("🚀 Starting FORCE SYNC TO CLOUD...");
+    const stores = Object.keys(COLLECTION_MAP);
+
+    // Run in parallel
+    await Promise.all(stores.map(store => pushLocalToCloud(store)));
+
+    console.log("✅ FORCE SYNC COMPLETE");
+    return true;
+};

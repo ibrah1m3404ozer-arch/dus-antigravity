@@ -4,9 +4,10 @@ import {
     LayoutDashboard, BookOpen, Timer, Brain, FileJson, TrendingUp, Library,
     Dumbbell, Pill, Utensils, Wallet, LineChart, Settings,
     ChevronDown, ChevronRight, Activity, Sparkles, Menu, X,
-    LogIn, LogOut, User
+    LogIn, LogOut, User, RefreshCw
 } from 'lucide-react';
 import { auth, loginWithGoogle, logoutUser } from '../utils/firebaseConfig';
+import { syncAllFromFirestore, forceSyncAllToCloud } from '../utils/sync';
 
 // Menu Groups Configuration
 const MENU_GROUPS = [
@@ -67,6 +68,7 @@ function Sidebar() {
     const [expandedGroups, setExpandedGroups] = useState(['dus']); // DUS open by default
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
     const [user, setUser] = useState(auth.currentUser);
+    const [isSyncing, setIsSyncing] = useState(false);
 
     // Listen to auth changes
     React.useEffect(() => {
@@ -91,9 +93,28 @@ function Sidebar() {
     const handleLogin = async () => {
         try {
             await loginWithGoogle();
-            window.location.reload(); // Reload to fetch fresh data for the new user
+            window.location.reload();
         } catch (error) {
             alert("Giriş yapılamadı: " + error.message);
+        }
+    };
+
+    const handleSync = async () => {
+        if (!user) return;
+        try {
+            setIsSyncing(true);
+            // 1. Push local changes to cloud
+            await forceSyncAllToCloud();
+            // 2. Pull external changes from cloud
+            await syncAllFromFirestore();
+
+            alert("✅ Senkronizasyon Tamamlandı!");
+            window.location.reload();
+        } catch (error) {
+            console.error(error);
+            alert("Senkronizasyon Hatası: " + error.message);
+        } finally {
+            setIsSyncing(false);
         }
     };
 
@@ -233,9 +254,19 @@ function Sidebar() {
                                     <span className="text-[10px] text-muted-foreground truncate">Online</span>
                                 </div>
                             </div>
-                            <button onClick={logoutUser} className="text-red-400 hover:text-red-500 p-1" title="Çıkış Yap">
-                                <LogOut size={16} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={handleSync}
+                                    disabled={isSyncing}
+                                    className={`text-blue-400 hover:text-blue-500 p-1 transition-transform ${isSyncing ? 'animate-spin' : ''}`}
+                                    title="Bulut ile Eşitle"
+                                >
+                                    <RefreshCw size={16} />
+                                </button>
+                                <button onClick={logoutUser} className="text-red-400 hover:text-red-500 p-1" title="Çıkış Yap">
+                                    <LogOut size={16} />
+                                </button>
+                            </div>
                         </div>
                     ) : (
                         <button
