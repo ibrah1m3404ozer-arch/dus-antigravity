@@ -7,18 +7,12 @@ function Settings() {
     const { exportData, importData } = useStudyData();
     const fileInputRef = useRef(null);
     const [importStatus, setImportStatus] = useState(null);
-    const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || 'AIzaSyAdHTT9GHHlyQnL9G9V2uEC4gvj3Zq0ukw');
+    const [apiKey, setApiKey] = useState(localStorage.getItem('gemini_api_key') || '');
     const [keySaved, setKeySaved] = useState(false);
     const [testStatus, setTestStatus] = useState(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
 
-    useEffect(() => {
-        if (!localStorage.getItem('gemini_api_key')) {
-            const defaultKey = 'AIzaSyAdHTT9GHHlyQnL9G9V2uEC4gvj3Zq0ukw';
-            localStorage.setItem('gemini_api_key', defaultKey);
-            setApiKey(defaultKey);
-        }
-    }, []);
+    // Removed default API key for security - users must enter their own
 
     // Profile State
     const [profile, setProfile] = useState({

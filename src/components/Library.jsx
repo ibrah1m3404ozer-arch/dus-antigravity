@@ -349,8 +349,16 @@ function Library() {
             return (
                 <div className="flex flex-col items-center justify-center h-full text-muted-foreground p-8 text-center bg-card/50 rounded-lg border border-dashed border-border">
                     <FileText size={48} className="mb-4 opacity-50" />
-                    <p className="font-medium">PDF Görüntülenemiyor</p>
-                    <p className="text-sm mt-2 opacity-75">Dosya hasarlı veya yüklenirken bir sorun oluştu.</p>
+                    <p className="font-bold text-lg">PDF Dosyası Bulunamadı</p>
+                    <p className="text-sm mt-2 opacity-75 max-w-md">
+                        Bu dosya eski sistemde yüklenmiş olabilir. Lütfen dosyayı silin ve yeniden yükleyin.
+                    </p>
+                    <button
+                        onClick={() => setSelectedResource(null)}
+                        className="mt-4 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors"
+                    >
+                        Geri Dön
+                    </button>
                 </div>
             );
         }
