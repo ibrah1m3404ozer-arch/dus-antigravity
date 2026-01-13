@@ -22,6 +22,7 @@ const STORAGE_KEYS = {
     LONG_BREAK: 'dus-pomodoro-longBreakTime'
 };
 
+// v1.0.1 - Stable version with curriculum integration
 function PomodoroTimer() {
     // Timer Settings - initialize from localStorage
     const [workTime, setWorkTime] = useState(() => {
