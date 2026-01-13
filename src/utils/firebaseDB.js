@@ -188,6 +188,7 @@ export const listenToStudySessions = (callback) => {
             // Anonymous users: load from IndexedDB
             const { getStudySessions } = await import('./db');
             const sessions = await getStudySessions();
+            console.log('🔑 listenToStudySessions (anonymous): Loaded', sessions.length, 'sessions from IndexedDB');
             callback(sessions);
 
             // Return a no-op unsubscribe

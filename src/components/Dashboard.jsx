@@ -48,14 +48,18 @@ function Dashboard() {
         // Load Study Sessions with Firestore realtime listener
         let unsubscribe = () => { };
         const initListener = async () => {
+            console.log('🔍 Dashboard: Starting session listener...');
             try {
                 unsubscribe = await listenToStudySessions((sessions) => {
+                    console.log('📊 Dashboard received sessions:', sessions.length, sessions);
                     setStudySessions(sessions);
                     setSessionsLoading(false);
                 });
+                console.log('✅ Listener initialized');
             } catch (error) {
-                console.warn('Firestore listener failed, using local:', error);
+                console.error('❌ Firestore listener failed:', error);
                 const sessions = await getStudySessions();
+                console.log('📦 Fallback - loaded from IndexedDB:', sessions.length, sessions);
                 setStudySessions(sessions);
                 setSessionsLoading(false);
             }
