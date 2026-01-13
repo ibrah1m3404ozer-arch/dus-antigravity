@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { STATUS_CONFIG } from '../utils/data';
 import { RotateCw, NotebookPen, X, Save, Camera, Image as ImageIcon, Trash2, Maximize2 } from 'lucide-react';
 
-function TopicCard({ topic, onStatusChange, onNoteUpdate, onAddImage, onRemoveImage }) {
+function TopicCard({ topic, searchQuery, highlightText, onStatusChange, onNoteUpdate, onAddImage, onRemoveImage }) {
     const currentStatus = STATUS_CONFIG[topic.status] || STATUS_CONFIG['not-started'];
     const [isNoteOpen, setIsNoteOpen] = useState(false);
     const [noteText, setNoteText] = useState(topic.note || '');
@@ -67,7 +67,7 @@ function TopicCard({ topic, onStatusChange, onNoteUpdate, onAddImage, onRemoveIm
         <div className="bg-card border border-border rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow relative group flex flex-col h-full">
             <div className="flex justify-between items-start mb-3">
                 <h3 className="font-semibold text-lg text-foreground/90 leading-tight">
-                    {topic.title}
+                    {highlightText && searchQuery ? highlightText(topic.title, searchQuery) : topic.title}
                 </h3>
                 <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
