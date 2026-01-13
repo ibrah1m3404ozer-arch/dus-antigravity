@@ -136,9 +136,10 @@ export const getAllArticles = async () => {
 };
 export const saveArticle = async (article) => {
     const db = await initDB();
+    // Save to IndexedDB with Blobs (IndexedDB supports Blobs)
     await db.put(ARTICLE_STORE, article);
 
-    // Sync to Firebase
+    // Sync to Firebase (WITHOUT Blobs - Firestore doesn't support them)
     if (auth.currentUser && !auth.currentUser.isAnonymous) {
         try {
             console.log('🔄 SAVE ARTICLE SYNC:', {
@@ -170,7 +171,8 @@ export const saveArticle = async (article) => {
 
             console.log('🔥 SYNC URLs:', { fileURL, audioURL, videoURL });
 
-            // Prepare document for Firestore (filter out undefined values)
+            // ✅ CRITICAL: Prepare document for Firestore WITHOUT Blob objects
+            // Firestore CANNOT store Blob/File objects - only URLs!
             const firestoreDoc = {
                 id: article.id,
                 title: article.title || '',
@@ -178,9 +180,11 @@ export const saveArticle = async (article) => {
                 content: article.content || '',
                 createdAt: article.createdAt || new Date().toISOString(),
                 folderId: article.folderId || null,
+                // 🚫 NO BLOBS - Only URLs!
                 fileURL: fileURL || null,
                 audioURL: audioURL || null,
                 videoURL: videoURL || null,
+                // Text fields
                 extractedText: article.extractedText || '',
                 manualSummary: article.manualSummary || '',
                 tags: article.tags || [],
@@ -194,6 +198,7 @@ export const saveArticle = async (article) => {
             if (article.generatedFlashcards) firestoreDoc.generatedFlashcards = article.generatedFlashcards;
             if (article.generatedQuizSets) firestoreDoc.generatedQuizSets = article.generatedQuizSets;
 
+            console.log('📤 Syncing to Firestore (no Blobs):', Object.keys(firestoreDoc));
             await saveLibraryArticle(firestoreDoc);
             console.log('✅ SYNC COMPLETE with fileURL:', fileURL);
         } catch (err) {
