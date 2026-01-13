@@ -185,7 +185,12 @@ export const listenToStudySessions = (callback) => {
         await authReady;
 
         if (!auth.currentUser || auth.currentUser.isAnonymous) {
-            callback([]); // Anonymous users use local storage only
+            // Anonymous users: load from IndexedDB
+            const { getStudySessions } = await import('./db');
+            const sessions = await getStudySessions();
+            callback(sessions);
+
+            // Return a no-op unsubscribe
             return () => { };
         }
 
