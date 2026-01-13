@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Layout from './components/Layout';
 import Curriculum from './components/Curriculum';
@@ -22,6 +22,13 @@ import Finance from './components/Finance';
 import FinanceNewsHub from './components/FinanceNewsHub';
 
 function App() {
+  // Request notification permission on first load
+  useEffect(() => {
+    if ('Notification' in window && Notification.permission === 'default') {
+      Notification.requestPermission();
+    }
+  }, []);
+
   return (
     <BrowserRouter>
       <Routes>
