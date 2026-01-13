@@ -469,7 +469,16 @@ function Dashboard() {
 
                         const handleDeleteSession = async (sessionId) => {
                             if (confirm('Bu oturumu silmek istediğinden emin misin?')) {
-                                await deleteStudySession(sessionId);
+                                try {
+                                    await deleteStudySession(sessionId);
+                                    console.log('🗑️ Session deleted:', sessionId);
+                                    // Refresh the list
+                                    const sessions = await getStudySessions();
+                                    setStudySessions(sessions);
+                                } catch (error) {
+                                    console.error('❌ Delete failed:', error);
+                                    alert('Silme işlemi başarısız oldu!');
+                                }
                             }
                         };
 
