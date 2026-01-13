@@ -170,19 +170,31 @@ export const saveArticle = async (article) => {
 
             console.log('🔥 SYNC URLs:', { fileURL, audioURL, videoURL });
 
-            await saveLibraryArticle({
+            // Prepare document for Firestore (filter out undefined values)
+            const firestoreDoc = {
                 id: article.id,
-                title: article.title,
-                category: article.category,
-                content: article.content,
-                summary: article.summary,
-                createdAt: article.createdAt,
-                folderId: article.folderId,
-                fileURL, audioURL, videoURL,
-                aiSummary: article.aiSummary,
-                generatedFlashcards: article.generatedFlashcards,
-                generatedQuizSets: article.generatedQuizSets
-            });
+                title: article.title || '',
+                category: article.category || '',
+                content: article.content || '',
+                createdAt: article.createdAt || new Date().toISOString(),
+                folderId: article.folderId || null,
+                fileURL: fileURL || null,
+                audioURL: audioURL || null,
+                videoURL: videoURL || null,
+                extractedText: article.extractedText || '',
+                manualSummary: article.manualSummary || '',
+                tags: article.tags || [],
+                folder: article.folder || '',
+                sourceType: article.sourceType || 'manual'
+            };
+
+            // Only include optional fields if they exist
+            if (article.summary) firestoreDoc.summary = article.summary;
+            if (article.aiSummary) firestoreDoc.aiSummary = article.aiSummary;
+            if (article.generatedFlashcards) firestoreDoc.generatedFlashcards = article.generatedFlashcards;
+            if (article.generatedQuizSets) firestoreDoc.generatedQuizSets = article.generatedQuizSets;
+
+            await saveLibraryArticle(firestoreDoc);
             console.log('✅ SYNC COMPLETE with fileURL:', fileURL);
         } catch (err) {
             console.warn('Firebase sync error:', err);
