@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { Play, Pause, RotateCcw, Coffee, BookOpen, Settings, Volume2, VolumeX, CheckCircle, Flame, Plus, Minus } from 'lucide-react';
+import { Play, Pause, RotateCcw, Coffee, BookOpen, Settings, Volume2, VolumeX, CheckCircle, Flame, Plus, Minus, X } from 'lucide-react';
 import { saveStudySession } from '../utils/db';
 
 const DUS_SUBJECTS = [
