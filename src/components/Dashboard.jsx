@@ -821,6 +821,75 @@ function Dashboard() {
                     </div>
                 )}
             </div>
+
+            {/* Profile Edit Modal */}
+            {isEditingProfile && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+                    <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full shadow-2xl animate-in zoom-in duration-200">
+                        <div className="flex justify-between items-center mb-6">
+                            <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-primary to-purple-400">
+                                Profili Düzenle
+                            </h3>
+                            <button
+                                onClick={() => setIsEditingProfile(false)}
+                                className="p-2 rounded-full hover:bg-accent/10 transition-colors"
+                            >
+                                <X className="w-5 h-5 text-muted-foreground" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-muted-foreground">İsmin</label>
+                                <input
+                                    type="text"
+                                    value={editProfile.name}
+                                    onChange={(e) => setEditProfile({ ...editProfile, name: e.target.value })}
+                                    placeholder="Örn: Dr. Kaan"
+                                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-muted-foreground">Motto</label>
+                                <input
+                                    type="text"
+                                    value={editProfile.motto}
+                                    onChange={(e) => setEditProfile({ ...editProfile, motto: e.target.value })}
+                                    placeholder="Örn: Vazgeçmek yok!"
+                                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium mb-2 text-muted-foreground">Hedef Tarihi</label>
+                                <input
+                                    type="date"
+                                    value={editProfile.date}
+                                    onChange={(e) => setEditProfile({ ...editProfile, date: e.target.value })}
+                                    className="w-full px-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <button
+                                onClick={() => setIsEditingProfile(false)}
+                                className="flex-1 px-4 py-3 bg-secondary hover:bg-secondary/80 text-foreground font-medium rounded-xl transition-all"
+                            >
+                                İptal
+                            </button>
+                            <button
+                                onClick={saveProfile}
+                                className="flex-1 px-4 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center justify-center gap-2"
+                            >
+                                <Save className="w-4 h-4" />
+                                Kaydet
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
