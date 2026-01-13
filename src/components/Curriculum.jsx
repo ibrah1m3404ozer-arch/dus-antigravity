@@ -111,7 +111,9 @@ function Curriculum() {
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className={`h-2 w-2 rounded-full ${isExpanded ? 'bg-primary' : 'bg-muted-foreground'}`} />
-                                                <h4 className="text-lg font-medium">{subject.title}</h4>
+                                                <h4 className="text-lg font-medium">
+                                                    {debouncedSearch ? highlightText(subject.title, debouncedSearch) : subject.title}
+                                                </h4>
                                             </div>
                                             <div className="text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
                                                 {getProgress(subject.topics)} Tamamlandı
