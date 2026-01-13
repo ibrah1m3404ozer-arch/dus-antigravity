@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
 import TopicCard from './TopicCard';
 import { Search } from 'lucide-react';
@@ -7,11 +7,53 @@ function Curriculum() {
     const { data, updateTopicStatus, updateTopicNote, addImage, removeImage } = useStudyData();
     const [expandedSubjects, setExpandedSubjects] = useState({});
     const [searchQuery, setSearchQuery] = useState('');
+    const [debouncedSearch, setDebouncedSearch] = useState('');
+    const [savedExpandedState, setSavedExpandedState] = useState({ saved: false, state: {} });
+
+    // Debounce search input (300ms)
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearch(searchQuery);
+        }, 300);
+        return () => clearTimeout(timer);
+    }, [searchQuery]);
+
+    // Save/restore expanded state when searching
+    useEffect(() => {
+        if (debouncedSearch && !savedExpandedState.saved) {
+            // Save current state before search
+            setSavedExpandedState({ saved: true, state: expandedSubjects });
+        } else if (!debouncedSearch && savedExpandedState.saved) {
+            // Restore state when search cleared
+            setExpandedSubjects(savedExpandedState.state);
+            setSavedExpandedState({ saved: false, state: {} });
+        }
+    }, [debouncedSearch]);
 
     const filterTopics = (topics) => {
-        if (!searchQuery) return topics;
+        if (!debouncedSearch) return topics;
         return topics.filter((t) =>
-            t.title.toLowerCase().includes(searchQuery.toLowerCase())
+            t.title.toLowerCase().includes(debouncedSearch.toLowerCase())
+        );
+    };
+
+    // Highlight matching text
+    const highlightText = (text, query) => {
+        if (!query) return text;
+
+        const regex = new RegExp(`(${query})`, 'gi');
+        const parts = text.split(regex);
+
+        return (
+            <>
+                {parts.map((part, i) =>
+                    part.toLowerCase() === query.toLowerCase() ? (
+                        <span key={i} className="bg-yellow-300 dark:bg-yellow-600 px-1 rounded">
+                            {part}
+                        </span>
+                    ) : part
+                )}
+            </>
         );
     };
 
@@ -58,7 +100,7 @@ function Curriculum() {
                         </h3>
                         <div className="grid grid-cols-1 gap-4">
                             {group.subjects.map((subject) => {
-                                const isExpanded = expandedSubjects[subject.id] || searchQuery.length > 0;
+                                const isExpanded = expandedSubjects[subject.id] || debouncedSearch.length > 0;
                                 const displayedTopics = filterTopics(subject.topics);
 
                                 return (
@@ -76,13 +118,15 @@ function Curriculum() {
                                             </div>
                                         </button>
 
-                                        {(isExpanded || searchQuery) && (
+                                        {(isExpanded || debouncedSearch) && (
                                             <div className="p-4 pt-0 border-t border-border/50 bg-card/50">
                                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-4">
                                                     {displayedTopics.map((topic) => (
                                                         <TopicCard
                                                             key={topic.id}
                                                             topic={topic}
+                                                            searchQuery={debouncedSearch}
+                                                            highlightText={highlightText}
                                                             onStatusChange={updateTopicStatus}
                                                             onNoteUpdate={updateTopicNote}
                                                             onAddImage={addImage}
@@ -91,7 +135,11 @@ function Curriculum() {
                                                     ))}
                                                 </div>
                                                 {displayedTopics.length === 0 && (
-                                                    <p className="text-sm text-muted-foreground italic mt-2">Bu aramaya uygun konu bulunamadı.</p>
+                                                    <div className="text-center py-8 bg-secondary/20 rounded-xl border border-dashed border-border">
+                                                        <p className="text-sm text-muted-foreground">
+                                                            Aramaya uygun konu bulunamadı – farklı kelime dene.
+                                                        </p>
+                                                    </div>
                                                 )}
                                             </div>
                                         )}
