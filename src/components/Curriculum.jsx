@@ -101,12 +101,11 @@ function Curriculum() {
         const mappedTotals = {};
         data.forEach(group => {
             group.subjects.forEach(subject => {
-                // Check if subject title contains any Pomodoro subject name
-                let totalTime = totals[subject.title] || 0;
+                let totalTime = 0;
 
-                // Check for partial matches (e.g., "Pedodonti" in "Çocuk Diş Hekimliği (Pedodonti)")
+                // Check for matches (exact or partial)
                 Object.keys(totals).forEach(pomodoroSubject => {
-                    if (subject.title.includes(pomodoroSubject)) {
+                    if (subject.title === pomodoroSubject || subject.title.includes(pomodoroSubject)) {
                         totalTime += totals[pomodoroSubject];
                     }
                 });
