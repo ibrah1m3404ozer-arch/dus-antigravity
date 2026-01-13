@@ -165,6 +165,8 @@ function Library() {
         setUploadStatus('PDF işleniyor...');
 
         try {
+            console.log('🚀 UPLOAD START:', { hasFile: !!resourceData.pdfFile, title: resourceData.title });
+
             let text = '';
             // Only attempt extraction if it's a PDF
             if (resourceData.pdfFile) {
@@ -176,31 +178,56 @@ function Library() {
                 }
             }
 
-            setUploadStatus('Kaydediliyor...');
-
             const newResource = {
                 id: Date.now().toString(),
-                folderId: currentFolderId,
                 title: resourceData.title,
-                content: text,
-                fileBlob: resourceData.pdfFile, // IndexedDB handles Blobs well usually
-                category: resourceData.category,
-                manualSummary: resourceData.manualSummary || '',
+                folder: resourceData.folder,
+                tags: resourceData.tags || [],
+                category: resourceData.category || '',
+                fileBlob: resourceData.pdfFile,
                 audioFile: resourceData.audioFile || null,
                 videoFile: resourceData.videoFile || null,
-                generatedFlashcards: [],
-                generatedQuizSets: [],
-                createdAt: new Date().toISOString()
+                extractedText: text,
+                manualSummary: resourceData.manualSummary || '',
+                images: [],
+                createdAt: new Date().toISOString(),
+                metadata: {},
+                sourceType: resourceData.pdfFile ? 'pdf' : 'manual'
             };
 
+            // 🔥 FIX: Upload to Firebase Storage FIRST for authenticated users
+            const { auth } = await import('../utils/firebaseConfig');
+            const { storageHelpers } = await import('../utils/firebaseDB');
+
+            if (auth.currentUser && !auth.currentUser.isAnonymous && resourceData.pdfFile) {
+                setUploadStatus('Firebase Storage\'a yükleniyor...');
+                console.log('📤 Uploading to Firebase Storage...');
+
+                const fileURL = await storageHelpers.uploadFile(
+                    resourceData.pdfFile,
+                    `articles/${newResource.id}/file.pdf`
+                );
+
+                newResource.fileURL = fileURL;
+                console.log('✅ Upload successful:', fileURL);
+            }
+
+            setUploadStatus('Kaydediliyor...');
             await saveArticle(newResource);
-            setUploadStatus('✅ Kaynak eklendi!');
+            console.log('💾 Saved to IndexedDB');
+
+            setUploadStatus('Tamamlandı!');
+            setTimeout(() => {
+                setIsUploading(false);
+                setUploadStatus('');
+            }, 1000);
+
+            // Reload data to reflect changes
             await loadData();
         } catch (error) {
             console.error(error);
             setUploadStatus('❌ Hata: ' + error.message);
             alert('Hata: ' + error.message);
-        } finally {
             setIsUploading(false);
             setTimeout(() => setUploadStatus(''), 3000);
         }

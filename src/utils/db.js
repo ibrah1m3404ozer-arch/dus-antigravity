@@ -141,29 +141,34 @@ export const saveArticle = async (article) => {
     // Sync to Firebase
     if (auth.currentUser && !auth.currentUser.isAnonymous) {
         try {
-            // Upload files ONLY if new Blob exists. If not, Keep existing URL (or null if deleting)
-            // But we don't have "existing" here unless we pass it.
-            // Assumption: article object MIGHT have fileURL if we merging. 
-            // Better: If !blob && article.fileURL, use article.fileURL.
-
-            const fileURL = article.fileBlob instanceof Blob
-                ? await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`)
-                : (article.fileURL || null);
-
-            const audioURL = article.audioFile instanceof Blob
-                ? await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`)
-                : (article.audioURL || null);
-
-            const videoURL = article.videoFile instanceof Blob
-                ? await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`)
-                : (article.videoURL || null);
-
-            console.log('🔥 SYNC DEBUG:', {
+            console.log('🔄 SAVE ARTICLE SYNC:', {
                 id: article.id,
                 hasFileBlob: article.fileBlob instanceof Blob,
-                generatedFileURL: fileURL,
-                existingFileURL: article.fileURL
+                hasFileURL: !!article.fileURL,
+                hasAudioFile: article.audioFile instanceof Blob,
+                hasAudioURL: !!article.audioURL
             });
+
+            // ✅ FIXED: Only upload if we have a Blob AND no URL yet
+            const fileURL = article.fileURL
+                ? article.fileURL  // Use existing URL
+                : article.fileBlob instanceof Blob
+                    ? await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`)
+                    : null;
+
+            const audioURL = article.audioURL
+                ? article.audioURL  // Use existing URL  
+                : article.audioFile instanceof Blob
+                    ? await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`)
+                    : null;
+
+            const videoURL = article.videoURL
+                ? article.videoURL  // Use existing URL
+                : article.videoFile instanceof Blob
+                    ? await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`)
+                    : null;
+
+            console.log('🔥 SYNC URLs:', { fileURL, audioURL, videoURL });
 
             await saveLibraryArticle({
                 id: article.id,
