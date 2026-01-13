@@ -26,15 +26,18 @@ function PomodoroTimer() {
     // Timer Settings - initialize from localStorage
     const [workTime, setWorkTime] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.WORK_TIME);
-        return saved ? parseInt(saved) : 25;
+        const parsed = Number(saved);
+        return isNaN(parsed) ? 25 : parsed;
     });
     const [shortBreakTime, setShortBreakTime] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.SHORT_BREAK);
-        return saved ? parseInt(saved) : 5;
+        const parsed = Number(saved);
+        return isNaN(parsed) ? 5 : parsed;
     });
     const [longBreakTime, setLongBreakTime] = useState(() => {
         const saved = localStorage.getItem(STORAGE_KEYS.LONG_BREAK);
-        return saved ? parseInt(saved) : 15;
+        const parsed = Number(saved);
+        return isNaN(parsed) ? 15 : parsed;
     });
 
     // Timer State
@@ -68,15 +71,9 @@ function PomodoroTimer() {
     // Persist settings to localStorage
     useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.WORK_TIME, workTime.toString());
-    }, [workTime]);
-
-    useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.SHORT_BREAK, shortBreakTime.toString());
-    }, [shortBreakTime]);
-
-    useEffect(() => {
         localStorage.setItem(STORAGE_KEYS.LONG_BREAK, longBreakTime.toString());
-    }, [longBreakTime]);
+    }, [workTime, shortBreakTime, longBreakTime]);
 
     // Initial Load
     useEffect(() => {
