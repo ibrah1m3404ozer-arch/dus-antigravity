@@ -45,36 +45,28 @@ function Dashboard() {
         };
         loadPearls();
 
-        // Load Study Sessions with Firestore realtime listener
-        let unsubscribe = () => { };
-        const initListener = async () => {
-            console.log('🔍 Dashboard: Starting session listener...');
+        // Load Study Sessions - SIMPLE VERSION
+        const loadSessions = async () => {
             try {
-                unsubscribe = await listenToStudySessions((sessions) => {
-                    console.log('📊 Dashboard received sessions:', sessions.length, sessions);
-                    setStudySessions(sessions);
-                    setSessionsLoading(false);
-                });
-                console.log('✅ Listener initialized');
-            } catch (error) {
-                console.error('❌ Firestore listener failed:', error);
                 const sessions = await getStudySessions();
-                console.log('📦 Fallback - loaded from IndexedDB:', sessions.length, sessions);
+                console.log('📊 Loaded sessions from IndexedDB:', sessions.length, sessions);
                 setStudySessions(sessions);
+                setSessionsLoading(false);
+            } catch (error) {
+                console.error('❌ Failed to load sessions:', error);
                 setSessionsLoading(false);
             }
         };
-        initListener();
+        loadSessions();
 
-        // Listen for new session saves (for IndexedDB users)
-        const handleSessionSaved = async () => {
-            const sessions = await getStudySessions();
-            setStudySessions(sessions);
+        // Listen for new session saves
+        const handleSessionSaved = () => {
+            console.log('🔔 New session saved, reloading...');
+            loadSessions();
         };
         window.addEventListener('study-session-saved', handleSessionSaved);
 
         return () => {
-            if (unsubscribe) unsubscribe();
             window.removeEventListener('study-session-saved', handleSessionSaved);
         };
     }, []);
@@ -370,6 +362,25 @@ function Dashboard() {
 
                 {/* Study Sessions Card */}
                 <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                    {/* TEST BUTTON */}
+                    <button
+                        onClick={async () => {
+                            const testSession = {
+                                id: `test-${Date.now()}`,
+                                subject: 'Anatomi',
+                                duration: 25,
+                                timestamp: new Date().toISOString()
+                            };
+                            await saveStudySession(testSession);
+                            console.log('✅ TEST OTURUMU KAYDEDİLDİ! Kartı kontrol et:', testSession);
+                            const sessions = await getStudySessions();
+                            setStudySessions(sessions);
+                        }}
+                        className="w-full mb-4 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors"
+                    >
+                        🧪 TEST OTURUMU OLUŞTUR (Anatomi, 25 dk)
+                    </button>
+
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Clock className="w-5 h-5 text-primary" />
