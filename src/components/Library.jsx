@@ -96,17 +96,26 @@ function Library() {
         }
     };
 
-    // Merge helper with download support
+    // Merge helper with download support + FULL DEBUG
     const mergeLibraryData = async (local, cloud) => {
+        console.log('🔄 ===== MERGE START =====');
+        console.log('📱 Local count:', local.length);
+        console.log('☁️ Cloud count:', cloud.length);
         const map = new Map();
 
         // Start with cloud data
-        cloud.forEach(c => map.set(c.id, { ...c }));
+        console.log('☁️ Processing cloud items...');
+        cloud.forEach(c => {
+            console.log('  ☁️', c.id, c.title, 'URL:', c.fileURL ? '✅' : '❌');
+            map.set(c.id, { ...c });
+        });
 
         // Merge with local data (preserve local Blobs)
+        console.log('📱 Merging local blobs...');
         local.forEach(l => {
             if (map.has(l.id)) {
                 const existing = map.get(l.id);
+                console.log('  📱 Merging:', l.id, 'hasBlob:', !!l.fileBlob);
                 // Keep local Blobs if they exist
                 existing.fileBlob = l.fileBlob || null;
                 existing.audioFile = l.audioFile || null;
@@ -118,24 +127,40 @@ function Library() {
 
         // Download missing files from cloud URLs
         const merged = Array.from(map.values());
-        const downloadPromises = merged.map(async (article) => {
-            // Download PDF if we have URL but no local Blob
+        console.log('🔄 Total merged:', merged.length);
+
+        // SEQUENTIAL downloads for debugging
+        console.log('📥 Starting downloads...');
+        for (const article of merged) {
             if (article.fileURL && !article.fileBlob) {
+                console.log('📥 DOWNLOADING:', article.title);
+                console.log('  URL:', article.fileURL);
                 try {
-                    console.log('📥 Downloading PDF:', article.title);
                     const response = await fetch(article.fileURL);
+                    console.log('  Response:', response.status, response.ok);
+
                     if (response.ok) {
                         article.fileBlob = await response.blob();
-                        console.log('✅ Downloaded:', article.title);
+                        console.log('  ✅ Downloaded:', article.fileBlob.size, 'bytes');
+
+                        // Save immediately
+                        await saveArticle(article);
+                        console.log('  💾 Saved to IndexedDB');
+                    } else {
+                        console.error('  ❌ HTTP Error:', response.status);
                     }
                 } catch (err) {
-                    console.warn('Download failed for:', article.title, err);
+                    console.error('  ❌ Download failed:', err);
                 }
+            } else if (article.fileBlob) {
+                console.log('✅ Has blob:', article.title);
+            } else {
+                console.log('⚠️ No URL:', article.title);
             }
-            return article;
-        });
+        }
 
-        return await Promise.all(downloadPromises);
+        console.log('✅ ===== MERGE COMPLETE =====');
+        return merged;
     };
 
     // Initialize session state when resource is selected
