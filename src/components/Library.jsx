@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X } from 'lucide-react';
+import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X, Download } from 'lucide-react';
 import { getAllArticles, saveArticle, deleteArticle, getFolders, createFolder, deleteFolder, savePearl, deletePearl, saveQuestion, deleteQuestion } from '../utils/db';
 import { summarizeText, generateFlashcards, generateQuiz } from '../services/aiService';
 import ResourceUploadModal from './ResourceUploadModal';
