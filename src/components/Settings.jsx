@@ -1,6 +1,6 @@
-import React, { useRef, useState, useEffect } from 'react';
+import React, { useRef, useState } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
-import { Download, Upload, AlertCircle, CheckCircle2, Loader2, User, Target, Calendar as CalendarIcon, Quote } from 'lucide-react';
+import { Download, Upload, AlertCircle, CheckCircle2, Loader2 } from 'lucide-react';
 import { resetDB } from '../utils/db';
 
 function Settings() {
@@ -11,42 +11,6 @@ function Settings() {
     const [keySaved, setKeySaved] = useState(false);
     const [testStatus, setTestStatus] = useState(null);
     const [showResetConfirm, setShowResetConfirm] = useState(false);
-
-    // Removed default API key for security - users must enter their own
-
-    // Profile State
-    const [profile, setProfile] = useState({
-        name: '',
-        goal: '',
-        date: '',
-        motto: ''
-    });
-
-    useEffect(() => {
-        const savedProfile = localStorage.getItem('user_profile');
-        if (savedProfile) {
-            setProfile(JSON.parse(savedProfile));
-        }
-    }, []);
-
-    const handleProfileChange = (e) => {
-        setProfile({ ...profile, [e.target.name]: e.target.value });
-    };
-
-    const saveProfile = () => {
-        localStorage.setItem('user_profile', JSON.stringify(profile));
-        // Show success animation or toast
-        const btn = document.getElementById('save-profile-btn');
-        if (btn) {
-            const originalText = btn.innerText;
-            btn.innerText = 'Kaydedildi! 🎉';
-            btn.classList.add('bg-green-500', 'text-white');
-            setTimeout(() => {
-                btn.innerText = originalText;
-                btn.classList.remove('bg-green-500', 'text-white');
-            }, 2000);
-        }
-    };
 
     const handleApiKeyChange = (e) => {
         const newValue = e.target.value.trim();
@@ -116,87 +80,7 @@ function Settings() {
 
             <div className="space-y-8">
 
-                {/* 1. Profile & Goals Section */}
-                <section className="bg-card border border-border rounded-2xl p-6 shadow-sm">
-                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <User className="text-primary" />
-                        Profil ve Büyük Hedef
-                    </h3>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1 text-muted-foreground">Adın & Ünvanın</label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        name="name"
-                                        value={profile.name}
-                                        onChange={handleProfileChange}
-                                        placeholder="Örn: Dr. Kaan"
-                                        className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1 text-muted-foreground">Motivasyon Sözün (Motto)</label>
-                                <div className="relative">
-                                    <Quote className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        name="motto"
-                                        value={profile.motto}
-                                        onChange={handleProfileChange}
-                                        placeholder="Örn: Vazgeçmek yok!"
-                                        className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium mb-1 text-muted-foreground">Büyük Hedefin</label>
-                                <div className="relative">
-                                    <Target className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        name="goal"
-                                        value={profile.goal}
-                                        onChange={handleProfileChange}
-                                        placeholder="Örn: DUS 2026 İlk 10"
-                                        className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                    />
-                                </div>
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium mb-1 text-muted-foreground">Hedef Tarihi</label>
-                                <div className="relative">
-                                    <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                                    <input
-                                        type="date"
-                                        name="date"
-                                        value={profile.date}
-                                        onChange={handleProfileChange}
-                                        className="w-full pl-10 pr-4 py-3 bg-muted/50 border border-border rounded-xl focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
-                                    />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="mt-6 flex justify-end">
-                        <button
-                            id="save-profile-btn"
-                            onClick={saveProfile}
-                            className="px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl transition-all shadow-lg shadow-primary/20"
-                        >
-                            Bilgileri Kaydet
-                        </button>
-                    </div>
-                </section>
-
-                {/* 2. AI Config */}
+                {/* AI Config */}
                 <section className="bg-card border border-border rounded-2xl p-6 shadow-sm">
                     <h3 className="text-xl font-bold mb-4">AI Bağlantısı</h3>
                     <p className="text-sm text-muted-foreground mb-4">Google Gemini API anahtarınızı girerek asistanı aktifleştirin.</p>

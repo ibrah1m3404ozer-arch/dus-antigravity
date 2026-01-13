@@ -2,7 +2,7 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { STATUS_CONFIG } from '../utils/data';
-import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2, Wifi, WifiOff, User } from 'lucide-react';
+import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2, Wifi, WifiOff, User, Edit2, X, Save } from 'lucide-react';
 import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession, saveStudySession } from '../utils/db';
 import { auth } from '../utils/firebaseConfig';
 import { listenToStudySessions } from '../utils/firebaseDB';
@@ -40,11 +40,21 @@ function Dashboard() {
     });
     const [isAnonymous, setIsAnonymous] = useState(true);
 
+    // Profile editing state
+    const [isEditingProfile, setIsEditingProfile] = useState(false);
+    const [editProfile, setEditProfile] = useState({ name: '', motto: '', date: '' });
+
     useEffect(() => {
         // Load Profile
         const savedProfile = localStorage.getItem('user_profile');
         if (savedProfile) {
-            setProfile(JSON.parse(savedProfile));
+            const parsed = JSON.parse(savedProfile);
+            setProfile(parsed);
+            setEditProfile({
+                name: parsed.name || '',
+                motto: parsed.motto || '',
+                date: parsed.date || ''
+            });
         }
 
         // Load Pearls
@@ -200,6 +210,32 @@ function Dashboard() {
         return totals;
     }, [studySessions]);
 
+    // Load profile and init edit profile
+    useEffect(() => {
+        const savedProfile = localStorage.getItem('user_profile');
+        if (savedProfile) {
+            const parsed = JSON.parse(savedProfile);
+            setProfile(parsed);
+            setEditProfile({
+                name: parsed.name || '',
+                motto: parsed.motto || '',
+                date: parsed.date || ''
+            });
+        }
+    }, []);
+
+    // Save profile
+    const saveProfile = () => {
+        const updated = { ...profile, ...editProfile };
+        setProfile(updated);
+        localStorage.setItem('user_profile', JSON.stringify(updated));
+        setIsEditingProfile(false);
+
+        // Show success message
+        setToast({ show: true, message: 'Profil kaydedildi! 🎉' });
+        setTimeout(() => setToast({ show: false, message: '' }), 2000);
+    };
+
     // Top 5 topics
     const topicStats = useMemo(() => {
         return Object.entries(topicTotals)
@@ -225,8 +261,15 @@ function Dashboard() {
             {/* Header / Welcome Section */}
             <div className="flex flex-col md:flex-row justify-between items-end gap-4">
                 <div>
-                    <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400">
+                    <h2 className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-primary to-blue-400 flex items-center gap-3">
                         Hoşgeldin, {profile.name || "Şampiyon"} 👋
+                        <button
+                            onClick={() => setIsEditingProfile(true)}
+                            className="p-2 rounded-full hover:bg-accent/10 transition-colors group"
+                            title="Profili Düzenle"
+                        >
+                            <Edit2 className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                        </button>
                     </h2>
                     <p className="text-muted-foreground mt-1 flex items-center gap-2">
                         <Quote size={14} className="text-primary" />
