@@ -88,15 +88,37 @@ function Curriculum() {
         return mins > 0 ? `${hours}s ${mins}dk` : `${hours}s`;
     };
 
-    // Calculate topic totals
+    // Calculate topic totals with flexible matching
     const topicTotals = useMemo(() => {
         const totals = {};
+
+        // First pass: exact matches
         studySessions.forEach(session => {
-            const topic = session.subject;
-            totals[topic] = (totals[topic] || 0) + session.duration;
+            totals[session.subject] = (totals[session.subject] || 0) + session.duration;
         });
-        return totals;
-    }, [studySessions]);
+
+        // Second pass: map Pomodoro subjects to topic titles
+        const mappedTotals = {};
+        data.forEach(group => {
+            group.subjects.forEach(subject => {
+                // Check if subject title contains any Pomodoro subject name
+                let totalTime = totals[subject.title] || 0;
+
+                // Check for partial matches (e.g., "Pedodonti" in "Çocuk Diş Hekimliği (Pedodonti)")
+                Object.keys(totals).forEach(pomodoroSubject => {
+                    if (subject.title.includes(pomodoroSubject)) {
+                        totalTime += totals[pomodoroSubject];
+                    }
+                });
+
+                if (totalTime > 0) {
+                    mappedTotals[subject.title] = totalTime;
+                }
+            });
+        });
+
+        return mappedTotals;
+    }, [studySessions, data]);
 
     const toggleSubject = (subjectId) => {
         setExpandedSubjects(prev => ({
