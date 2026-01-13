@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getAuth, signInAnonymously, onAuthStateChanged, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
+import { getStorage } from 'firebase/storage';
 
 const firebaseConfig = {
     apiKey: "AIzaSyDiQ-kFbhQeEtrT7AAa2p68RU3I3t2OlTo",
@@ -12,10 +13,10 @@ const firebaseConfig = {
     measurementId: "G-SV5XQRG1CE"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+const app = initializ eApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+const storage = getStorage(app);
 const googleProvider = new GoogleAuthProvider();
 
 // Enable offline persistence
@@ -60,4 +61,4 @@ const initAuth = async () => {
     });
 };
 
-export { db, auth, currentUser, initAuth };
+export { db, auth, storage, currentUser, initAuth };
