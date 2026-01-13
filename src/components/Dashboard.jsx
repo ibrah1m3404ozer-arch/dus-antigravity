@@ -235,6 +235,39 @@ function Dashboard() {
                 </div>
             </div>
 
+            {/* Sync Status Indicator */}
+            <div className={`rounded-xl p-4 border ${isOnline
+                    ? 'bg-emerald-500/10 border-emerald-500/20'
+                    : 'bg-amber-500/10 border-amber-500/20'
+                } transition-colors`}>
+                <div className="flex items-center gap-3">
+                    {isOnline ? (
+                        <Wifi className="w-5 h-5 text-emerald-500" />
+                    ) : (
+                        <WifiOff className="w-5 h-5 text-amber-500" />
+                    )}
+
+                    <div className="flex-1">
+                        <p className={`text-sm font-bold flex items-center gap-2 ${isOnline ? 'text-emerald-500' : 'text-amber-500'
+                            }`}>
+                            {isOnline ? '✅ Online' : '⚠️ Offline'}
+                            {isAnonymous && (
+                                <User className="w-4 h-4 text-blue-400" />
+                            )}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                            {isAnonymous ? (
+                                'Anonim mod – Sadece yerel kayıt (giriş yapınca cloud senkronize olur)'
+                            ) : isOnline ? (
+                                `Son senkron: ${getTimeAgo(lastSync)}`
+                            ) : (
+                                'Offline moddasın – Veriler yerel kaydediliyor. Sync bekleniyor.'
+                            )}
+                        </p>
+                    </div>
+                </div>
+            </div>
+
             {/* Stats Grid */}
             <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div className="bg-card border border-border rounded-2xl p-5 flex flex-col justify-between shadow-sm hover:border-primary/50 transition-colors group">
