@@ -48,7 +48,7 @@ function Curriculum() {
             <>
                 {parts.map((part, i) =>
                     part.toLowerCase() === query.toLowerCase() ? (
-                        <span key={i} className="bg-yellow-300 dark:bg-yellow-600 px-1 rounded">
+                        <span key={i} className="bg-amber-400/30 text-amber-200 font-bold px-1 rounded border border-amber-400/50">
                             {part}
                         </span>
                     ) : part
