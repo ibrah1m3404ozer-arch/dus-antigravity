@@ -2,8 +2,8 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { STATUS_CONFIG } from '../utils/data';
-import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote } from 'lucide-react';
-import { getPearls, togglePearlFavorite, savePearl } from '../utils/db';
+import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp } from 'lucide-react';
+import { getPearls, togglePearlFavorite, savePearl, getStudySessions } from '../utils/db';
 
 function Dashboard() {
     const { data } = useStudyData();
@@ -25,6 +25,11 @@ function Dashboard() {
     // Toast notification state
     const [toast, setToast] = useState({ show: false, message: '' });
 
+    // Study Session state
+    const [studySessions, setStudySessions] = useState([]);
+    const [sessionsLoading, setSessionsLoading] = useState(true);
+    const [timeFilter, setTimeFilter] = useState('all'); // 'today' | 'week' | 'month' | 'all'
+
     useEffect(() => {
         // Load Profile
         const savedProfile = localStorage.getItem('user_profile');
@@ -38,6 +43,19 @@ function Dashboard() {
             setSavedPearls(dbPearls);
         };
         loadPearls();
+
+        // Load Study Sessions with polling for realtime-like updates
+        const loadSessions = async () => {
+            setSessionsLoading(true);
+            const sessions = await getStudySessions();
+            setStudySessions(sessions);
+            setSessionsLoading(false);
+        };
+        loadSessions();
+
+        // Poll every 30 seconds for new sessions
+        const interval = setInterval(loadSessions, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     // Combine pearls logic...(Keep existing logic)
@@ -327,6 +345,152 @@ function Dashboard() {
                             </div>
                         )}
                     </div>
+                </div>
+
+                {/* Study Sessions Card */}
+                <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                    <div className="flex items-center justify-between mb-6">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <Clock className="w-5 h-5 text-primary" />
+                            Çalışma Geçmişi
+                        </h3>
+
+                        {/* Filter Buttons */}
+                        <div className="flex gap-2">
+                            {[
+                                { key: 'today', label: 'Bugün' },
+                                { key: 'week', label: 'Hafta' },
+                                { key: 'month', label: 'Ay' },
+                                { key: 'all', label: 'Tümü' }
+                            ].map(({ key, label }) => (
+                                <button
+                                    key={key}
+                                    onClick={() => setTimeFilter(key)}
+                                    className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${timeFilter === key
+                                            ? 'bg-primary text-primary-foreground shadow-sm'
+                                            : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                                        }`}
+                                >
+                                    {label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {sessionsLoading ? (
+                        <div className="text-center py-12 text-muted-foreground">
+                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
+                            <p className="text-sm">Yükleniyor...</p>
+                        </div>
+                    ) : (() => {
+                        // Filter sessions
+                        const now = new Date();
+                        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const weekStart = new Date(now - 7 * 24 * 60 * 60 * 1000);
+                        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
+                        const filtered = studySessions
+                            .filter(s => {
+                                const sessionDate = new Date(s.timestamp);
+                                switch (timeFilter) {
+                                    case 'today': return sessionDate >= todayStart;
+                                    case 'week': return sessionDate >= weekStart;
+                                    case 'month': return sessionDate >= monthStart;
+                                    default: return true;
+                                }
+                            })
+                            .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
+                            .slice(0, 100); // Limit to 100
+
+                        // Calculate stats
+                        const totalMinutes = filtered.reduce((sum, s) => sum + s.duration, 0);
+                        const hours = Math.floor(totalMinutes / 60);
+                        const mins = totalMinutes % 60;
+
+                        // Top subjects
+                        const subjectCounts = {};
+                        filtered.forEach(s => {
+                            subjectCounts[s.subject] = (subjectCounts[s.subject] || 0) + s.duration;
+                        });
+                        const topSubjects = Object.entries(subjectCounts)
+                            .sort((a, b) => b[1] - a[1])
+                            .slice(0, 5);
+
+                        return (
+                            <>
+                                {/* Stats Summary */}
+                                <div className="grid grid-cols-2 gap-4 mb-6">
+                                    <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-xl p-4 border border-blue-500/20">
+                                        <p className="text-2xl font-black text-blue-400">{filtered.length}</p>
+                                        <p className="text-xs text-muted-foreground font-semibold">Oturum</p>
+                                    </div>
+                                    <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 rounded-xl p-4 border border-emerald-500/20">
+                                        <p className="text-lg font-black text-emerald-400">{hours}s {mins}dk</p>
+                                        <p className="text-xs text-muted-foreground font-semibold">Toplam Çalışma</p>
+                                    </div>
+                                </div>
+
+                                {/* Session List */}
+                                {filtered.length > 0 ? (
+                                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+                                        {filtered.slice(0, 50).map(session => (
+                                            <div key={session.id} className="flex items-center justify-between p-3 bg-secondary/30 hover:bg-secondary/50 rounded-lg transition-colors border border-border/50">
+                                                <div className="flex-1">
+                                                    <p className="font-semibold text-sm">{session.subject}</p>
+                                                    <p className="text-xs text-muted-foreground">
+                                                        {new Date(session.timestamp).toLocaleString('tr-TR', {
+                                                            day: '2-digit',
+                                                            month: 'short',
+                                                            hour: '2-digit',
+                                                            minute: '2-digit'
+                                                        })}
+                                                    </p>
+                                                </div>
+                                                <div className="flex items-center gap-2">
+                                                    <Clock size={14} className="text-primary" />
+                                                    <span className="text-sm font-bold text-primary">{session.duration} dk</span>
+                                                </div>
+                                            </div>
+                                        ))}
+                                        {filtered.length > 50 && (
+                                            <p className="text-xs text-center text-muted-foreground py-2 bg-secondary/20 rounded-lg">
+                                                +{filtered.length - 50} oturum daha
+                                            </p>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div className="text-center py-12 text-muted-foreground bg-secondary/20 rounded-xl border border-dashed border-border">
+                                        <Clock size={48} className="mx-auto mb-3 opacity-30" />
+                                        <p className="font-semibold">Henüz oturum yok</p>
+                                        <p className="text-xs mt-1">Pomodoro ile çalışmaya başla! 🍅</p>
+                                    </div>
+                                )}
+
+                                {/* Top Subjects */}
+                                {topSubjects.length > 0 && (
+                                    <div className="mt-6 pt-6 border-t border-border">
+                                        <div className="flex items-center gap-2 mb-4">
+                                            <TrendingUp size={16} className="text-amber-500" />
+                                            <p className="text-xs font-black text-muted-foreground uppercase tracking-wider">En Çok Çalışılan</p>
+                                        </div>
+                                        <div className="space-y-2">
+                                            {topSubjects.map(([subject, minutes], idx) => (
+                                                <div key={subject} className="flex items-center justify-between text-sm group">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
+                                                            {idx + 1}
+                                                        </span>
+                                                        <span className="group-hover:text-primary transition-colors">{subject}</span>
+                                                    </div>
+                                                    <span className="font-bold text-primary">{minutes} dk</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+                            </>
+                        );
+                    })()}
                 </div>
             </div>
 
