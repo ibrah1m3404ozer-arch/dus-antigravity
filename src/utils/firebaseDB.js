@@ -55,6 +55,17 @@ export const storageHelpers = {
         } catch (error) {
             console.warn('File delete failed:', error);
         }
+    },
+
+    // Download file from Storage (returns Blob)
+    async downloadFile(url) {
+        await authReady;
+        if (!auth.currentUser) throw new Error('User not authenticated');
+
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Download failed');
+        const blob = await response.blob();
+        return blob;
     }
 };
 

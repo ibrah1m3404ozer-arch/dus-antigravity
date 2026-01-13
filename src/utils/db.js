@@ -141,9 +141,29 @@ export const saveArticle = async (article) => {
     // Sync to Firebase
     if (auth.currentUser && !auth.currentUser.isAnonymous) {
         try {
-            const fileURL = article.fileBlob ? await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`) : null;
-            const audioURL = article.audioFile ? await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`) : null;
-            const videoURL = article.videoFile ? await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`) : null;
+            // Upload files ONLY if new Blob exists. If not, Keep existing URL (or null if deleting)
+            // But we don't have "existing" here unless we pass it.
+            // Assumption: article object MIGHT have fileURL if we merging. 
+            // Better: If !blob && article.fileURL, use article.fileURL.
+
+            const fileURL = article.fileBlob instanceof Blob
+                ? await storageHelpers.uploadFile(article.fileBlob, `articles/${article.id}/file.pdf`)
+                : (article.fileURL || null);
+
+            const audioURL = article.audioFile instanceof Blob
+                ? await storageHelpers.uploadFile(article.audioFile, `articles/${article.id}/audio.mp3`)
+                : (article.audioURL || null);
+
+            const videoURL = article.videoFile instanceof Blob
+                ? await storageHelpers.uploadFile(article.videoFile, `articles/${article.id}/video.mp4`)
+                : (article.videoURL || null);
+
+            console.log('🔥 SYNC DEBUG:', {
+                id: article.id,
+                hasFileBlob: article.fileBlob instanceof Blob,
+                generatedFileURL: fileURL,
+                existingFileURL: article.fileURL
+            });
 
             await saveLibraryArticle({
                 id: article.id,
@@ -158,6 +178,7 @@ export const saveArticle = async (article) => {
                 generatedFlashcards: article.generatedFlashcards,
                 generatedQuizSets: article.generatedQuizSets
             });
+            console.log('✅ SYNC COMPLETE with fileURL:', fileURL);
         } catch (err) {
             console.warn('Firebase sync error:', err);
         }
