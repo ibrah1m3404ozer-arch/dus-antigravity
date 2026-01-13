@@ -362,25 +362,6 @@ function Dashboard() {
 
                 {/* Study Sessions Card */}
                 <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                    {/* TEST BUTTON */}
-                    <button
-                        onClick={async () => {
-                            const testSession = {
-                                id: `test-${Date.now()}`,
-                                subject: 'Anatomi',
-                                duration: 25,
-                                timestamp: new Date().toISOString()
-                            };
-                            await saveStudySession(testSession);
-                            console.log('✅ TEST OTURUMU KAYDEDİLDİ! Kartı kontrol et:', testSession);
-                            const sessions = await getStudySessions();
-                            setStudySessions(sessions);
-                        }}
-                        className="w-full mb-4 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-xl transition-colors"
-                    >
-                        🧪 TEST OTURUMU OLUŞTUR (Anatomi, 25 dk)
-                    </button>
-
                     <div className="flex items-center justify-between mb-6">
                         <h3 className="text-lg font-bold flex items-center gap-2">
                             <Clock className="w-5 h-5 text-primary" />
