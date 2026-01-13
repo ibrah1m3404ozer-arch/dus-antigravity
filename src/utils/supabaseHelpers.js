@@ -7,21 +7,34 @@ import { supabase, getCurrentUser } from './supabaseConfig';
  */
 export async function downloadFromSupabaseStorage(fileURL) {
     try {
-        console.log('📥 Starting Supabase Storage download...');
+        console.log('📥 Starting download...');
         console.log('  Input URL:', fileURL);
 
-        // Extract path from URL
-        // Supabase URL format: https://[project].supabase.co/storage/v1/object/public/articles/[path]
+        // CHECK: Is this an old Firebase URL?
+        if (fileURL.includes('firebasestorage.googleapis.com') || fileURL.includes('firebase')) {
+            console.log('⚠️ OLD FIREBASE URL DETECTED - Using CORS proxy');
+
+            // Use CORS proxy for old Firebase URLs
+            const proxyUrl = `https://corsproxy.io/?${encodeURIComponent(fileURL)}`;
+            const response = await fetch(proxyUrl);
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const blob = await response.blob();
+
+            console.log('✅ Downloaded via CORS proxy:', blob.size, 'bytes');
+            return blob;
+        }
+
+        // Extract path from Supabase URL
         let filePath;
 
         if (fileURL.includes('/storage/v1/object/public/articles/')) {
             const match = fileURL.match(/\/storage\/v1\/object\/public\/articles\/(.+)$/);
             filePath = match ? match[1] : fileURL;
         } else {
-            filePath = fileURL; // Assume it's already a path
+            filePath = fileURL;
         }
 
-        console.log('📥 Downloading path:', filePath);
+        console.log('📥 Downloading from Supabase:', filePath);
 
         // Download from Supabase Storage
         const { data, error } = await supabase.storage
@@ -29,18 +42,16 @@ export async function downloadFromSupabaseStorage(fileURL) {
             .download(filePath);
 
         if (error) {
-            console.error('❌ Supabase Storage download failed');
-            console.error('  Error:', error);
+            console.error('❌ Supabase download failed:', error);
             throw error;
         }
 
         console.log('✅ Download complete:', data.size, 'bytes');
-        return data; // data is already a Blob
+        return data;
 
     } catch (error) {
         console.error('❌ Download failed');
-        console.error('  Error type:', error.name);
-        console.error('  Error message:', error.message);
+        console.error('  Error:', error.message);
         throw error;
     }
 }
