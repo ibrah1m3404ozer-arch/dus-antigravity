@@ -18,7 +18,7 @@ import {
     initDB
 } from '../utils/db';
 import { syncAllFromFirestore, pushLocalToCloud } from '../utils/sync';
-import { initAuth } from '../utils/firebaseConfig';
+import { initAuth } from '../utils/supabaseConfig';
 
 const STORAGE_KEY = 'dus-antigravity-data';
 

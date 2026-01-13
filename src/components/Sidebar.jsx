@@ -6,7 +6,7 @@ import {
     ChevronDown, ChevronRight, Activity, Sparkles, Menu, X,
     LogIn, LogOut, User, RefreshCw, CloudUpload, CloudDownload
 } from 'lucide-react';
-import { auth, loginWithGoogle, logoutUser } from '../utils/firebaseConfig';
+import { supabase, loginWithGoogle, logoutUser, getCurrentUser } from '../utils/supabaseConfig';
 import { syncAllFromFirestore, forceSyncAllToCloud } from '../utils/sync';
 
 // Menu Groups Configuration

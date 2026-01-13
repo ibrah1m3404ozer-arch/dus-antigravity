@@ -2,7 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Upload, FileText, Trash2, FolderPlus, Folder, Home, Music, Video, Brain, Sparkles, BookOpen, Star, Clock, Plus, ChevronRight, ChevronDown, CheckSquare, Save, X, Download } from 'lucide-react';
 import { getAllArticles, saveArticle, deleteArticle, getFolders, createFolder, deleteFolder, savePearl, deletePearl, saveQuestion, deleteQuestion } from '../utils/db';
 import { summarizeText, generateFlashcards, generateQuiz } from '../services/aiService';
-import { downloadFromFirebaseStorage } from '../utils/firebaseHelpers';
+import { downloadFromSupabaseStorage, uploadToSupabaseStorage } from '../utils/supabaseHelpers';
+import { getAllLibraryArticles, saveLibraryArticle, deleteLibraryArticle, getAllLibraryFolders, saveLibraryFolder, deleteLibraryFolder } from '../utils/supabaseDB';
 import ResourceUploadModal from './ResourceUploadModal';
 import * as pdfjsLib from 'pdfjs-dist';
 
@@ -137,7 +138,7 @@ function Library() {
                 console.log('📥 DOWNLOADING:', article.title);
                 console.log('  URL:', article.fileURL);
                 try {
-                    article.fileBlob = await downloadFromFirebaseStorage(article.fileURL);
+                    article.fileBlob = await downloadFromSupabaseStorage(article.fileURL);
                     await saveArticle(article);
                     console.log('  💾 Saved to IndexedDB');
                 } catch (err) {

@@ -4,8 +4,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Ba
 import { STATUS_CONFIG } from '../utils/data';
 import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2, Wifi, WifiOff, User, Edit2, X, Save } from 'lucide-react';
 import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession, saveStudySession } from '../utils/db';
-import { auth } from '../utils/firebaseConfig';
-import { listenToStudySessions } from '../utils/firebaseDB';
+import { supabase, getCurrentUser } from '../utils/supabaseConfig';
 
 function Dashboard() {
     const { data } = useStudyData();
