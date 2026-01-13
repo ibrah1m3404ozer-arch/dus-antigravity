@@ -62,8 +62,16 @@ function Dashboard() {
         };
         initListener();
 
+        // Listen for new session saves (for IndexedDB users)
+        const handleSessionSaved = async () => {
+            const sessions = await getStudySessions();
+            setStudySessions(sessions);
+        };
+        window.addEventListener('study-session-saved', handleSessionSaved);
+
         return () => {
             if (unsubscribe) unsubscribe();
+            window.removeEventListener('study-session-saved', handleSessionSaved);
         };
     }, []);
 
@@ -376,8 +384,8 @@ function Dashboard() {
                                     key={key}
                                     onClick={() => setTimeFilter(key)}
                                     className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all ${timeFilter === key
-                                            ? 'bg-primary text-primary-foreground shadow-sm'
-                                            : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
+                                        ? 'bg-primary text-primary-foreground shadow-sm'
+                                        : 'bg-secondary/50 text-muted-foreground hover:bg-secondary'
                                         }`}
                                 >
                                     {label}

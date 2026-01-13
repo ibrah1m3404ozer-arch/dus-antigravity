@@ -383,7 +383,12 @@ export const deleteActivity = async (id) => {
 // --- Study Session Helpers (Pomodoro) ---
 export const saveStudySession = async (session) => {
     const db = await initDB();
-    return db.put(STUDY_SESSION_STORE, session);
+    const result = await db.put(STUDY_SESSION_STORE, session);
+
+    // Dispatch event for realtime updates in Dashboard
+    window.dispatchEvent(new Event('study-session-saved'));
+
+    return result;
 };
 export const getStudySessions = async () => {
     const db = await initDB();
