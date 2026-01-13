@@ -3,7 +3,7 @@ import { useStudyData } from '../hooks/useStudyData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { STATUS_CONFIG } from '../utils/data';
 import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2 } from 'lucide-react';
-import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession } from '../utils/db';
+import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession, saveStudySession } from '../utils/db';
 import { listenToStudySessions } from '../utils/firebaseDB';
 
 function Dashboard() {
