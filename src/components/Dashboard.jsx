@@ -2,8 +2,9 @@ import React, { useMemo, useState, useEffect } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { STATUS_CONFIG } from '../utils/data';
-import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2 } from 'lucide-react';
+import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2, Wifi, WifiOff, User } from 'lucide-react';
 import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession, saveStudySession } from '../utils/db';
+import { auth } from '../utils/firebaseConfig';
 import { listenToStudySessions } from '../utils/firebaseDB';
 
 function Dashboard() {
@@ -31,6 +32,14 @@ function Dashboard() {
     const [sessionsLoading, setSessionsLoading] = useState(true);
     const [timeFilter, setTimeFilter] = useState('all'); // 'today' | 'week' | 'month' | 'all'
 
+    // Sync status state
+    const [isOnline, setIsOnline] = useState(navigator.onLine);
+    const [lastSync, setLastSync] = useState(() => {
+        const saved = localStorage.getItem('last_sync_time');
+        return saved ? new Date(saved) : null;
+    });
+    const [isAnonymous, setIsAnonymous] = useState(true);
+
     useEffect(() => {
         // Load Profile
         const savedProfile = localStorage.getItem('user_profile');
@@ -45,6 +54,17 @@ function Dashboard() {
         };
         loadPearls();
 
+        // Check auth status
+        const unsubscribeAuth = auth.onAuthStateChanged((user) => {
+            setIsAnonymous(!user || user.isAnonymous);
+        });
+
+        // Online/Offline detection
+        const handleOnline = () => setIsOnline(true);
+        const handleOffline = () => setIsOnline(false);
+        window.addEventListener('online', handleOnline);
+        window.addEventListener('offline', handleOffline);
+
         // Load Study Sessions - SIMPLE VERSION
         const loadSessions = async () => {
             try {
@@ -52,6 +72,10 @@ function Dashboard() {
                 console.log('📊 Loaded sessions from IndexedDB:', sessions.length, sessions);
                 setStudySessions(sessions);
                 setSessionsLoading(false);
+                // Update sync time
+                const now = new Date();
+                setLastSync(now);
+                localStorage.setItem('last_sync_time', now.toISOString());
             } catch (error) {
                 console.error('❌ Failed to load sessions:', error);
                 setSessionsLoading(false);
@@ -68,6 +92,9 @@ function Dashboard() {
 
         return () => {
             window.removeEventListener('study-session-saved', handleSessionSaved);
+            window.removeEventListener('online', handleOnline);
+            window.removeEventListener('offline', handleOffline);
+            unsubscribeAuth();
         };
     }, []);
 
@@ -137,6 +164,20 @@ function Dashboard() {
     const targetDate = profile.date ? new Date(profile.date) : new Date('2026-10-15');
     const today = new Date();
     const daysLeft = Math.ceil((targetDate - today) / (1000 * 60 * 60 * 24));
+
+    // Time ago helper
+    const getTimeAgo = (date) => {
+        if (!date) return 'Hiç';
+
+        const seconds = Math.floor((new Date() - new Date(date)) / 1000);
+
+        if (seconds < 60) return 'Az önce';
+        const minutes = Math.floor(seconds / 60);
+        if (minutes < 60) return `${minutes} dk önce`;
+        const hours = Math.floor(minutes / 60);
+        const remainingMinutes = minutes % 60;
+        return remainingMinutes > 0 ? `${hours} saat ${remainingMinutes} dk önce` : `${hours} saat önce`;
+    };
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
