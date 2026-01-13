@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, RotateCcw, Coffee, BookOpen, Settings, Volume2, VolumeX, CheckCircle, Flame, Plus, Minus, X } from 'lucide-react';
-import { saveStudySession } from '../utils/db';
+import { saveStudySession, getAllTopicData, updateTopicData } from '../utils/db';
 
 const DUS_SUBJECTS = [
     "Anatomi", "Fizyoloji", "Biyokimya", "Mikrobiyoloji", "Patoloji", "Farmakoloji",
@@ -136,12 +136,49 @@ function PomodoroTimer() {
 
     const completeWorkSession = async () => {
         if (selectedSubject) {
+            // 1. Save study session (existing)
             await saveStudySession({
                 id: Date.now().toString(),
                 subject: selectedSubject,
                 duration: workTime,
                 timestamp: new Date().toISOString()
             });
+
+            // 2. Update curriculum topic status (NEW)
+            try {
+                const allTopics = await getAllTopicData();
+
+                // Find topic by matching title (case-insensitive)
+                const matchingTopic = allTopics.find(topic =>
+                    topic.title?.toLowerCase() === selectedSubject.toLowerCase()
+                );
+
+                if (matchingTopic) {
+                    // Update status logic
+                    let newStatus = matchingTopic.status;
+
+                    if (newStatus === 'not-started') {
+                        newStatus = 'studying';
+                    } else if (newStatus === 'studying' && workTime >= 60) {
+                        // If studied for ≥60 min, move to review1
+                        newStatus = 'review1';
+                    }
+                    // Keep other statuses as-is for now
+
+                    await updateTopicData({
+                        ...matchingTopic,
+                        status: newStatus,
+                        lastUpdated: new Date().toISOString()
+                    });
+
+                    console.log(`✅ Updated topic "${selectedSubject}" to ${newStatus}`);
+                } else {
+                    console.log(`ℹ️ No matching topic for "${selectedSubject}"`);
+                }
+            } catch (error) {
+                console.error('Failed to update curriculum:', error);
+                // Don't throw - keep saveStudySession working
+            }
         }
     };
 
