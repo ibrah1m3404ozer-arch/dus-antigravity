@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { Play, Pause, RotateCcw, Coffee, BookOpen, Settings, Volume2, VolumeX, CheckCircle, Flame, Plus, Minus } from 'lucide-react';
 import { saveStudySession } from '../utils/db';
 
@@ -15,11 +15,27 @@ const MODES = {
     LONG_BREAK: 'long_break'
 };
 
+// localStorage keys for persistence
+const STORAGE_KEYS = {
+    WORK_TIME: 'dus-pomodoro-workTime',
+    SHORT_BREAK: 'dus-pomodoro-shortBreakTime',
+    LONG_BREAK: 'dus-pomodoro-longBreakTime'
+};
+
 function PomodoroTimer() {
-    // Timer Settings
-    const [workTime, setWorkTime] = useState(25);
-    const [shortBreakTime, setShortBreakTime] = useState(5);
-    const [longBreakTime, setLongBreakTime] = useState(15);
+    // Timer Settings - initialize from localStorage
+    const [workTime, setWorkTime] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.WORK_TIME);
+        return saved ? parseInt(saved) : 25;
+    });
+    const [shortBreakTime, setShortBreakTime] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.SHORT_BREAK);
+        return saved ? parseInt(saved) : 5;
+    });
+    const [longBreakTime, setLongBreakTime] = useState(() => {
+        const saved = localStorage.getItem(STORAGE_KEYS.LONG_BREAK);
+        return saved ? parseInt(saved) : 15;
+    });
 
     // Timer State
     const [timeLeft, setTimeLeft] = useState(25 * 60);
@@ -34,7 +50,33 @@ function PomodoroTimer() {
     // Utils
     const [soundEnabled, setSoundEnabled] = useState(true);
     const [isHovered, setIsHovered] = useState(false);
-    const timerRef = useRef(null);
+    const audioRef = useRef(null);
+
+    // Preload audio on mount
+    useEffect(() => {
+        audioRef.current = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
+        audioRef.current.load();
+
+        return () => {
+            if (audioRef.current) {
+                audioRef.current.pause();
+                audioRef.current = null;
+            }
+        };
+    }, []);
+
+    // Persist settings to localStorage
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.WORK_TIME, workTime.toString());
+    }, [workTime]);
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.SHORT_BREAK, shortBreakTime.toString());
+    }, [shortBreakTime]);
+
+    useEffect(() => {
+        localStorage.setItem(STORAGE_KEYS.LONG_BREAK, longBreakTime.toString());
+    }, [longBreakTime]);
 
     // Initial Load
     useEffect(() => {
@@ -54,17 +96,20 @@ function PomodoroTimer() {
         }
     }, [shortBreakTime, longBreakTime]);
 
-    // Timer Logic
+    // Timer Logic - optimized interval cleanup
     useEffect(() => {
-        if (isActive && timeLeft > 0) {
-            timerRef.current = setInterval(() => {
-                setTimeLeft((prev) => prev - 1);
-            }, 1000);
-        } else if (timeLeft === 0 && isActive) {
-            handleTimerComplete();
+        if (!isActive || timeLeft <= 0) {
+            if (timeLeft === 0 && isActive) {
+                handleTimerComplete();
+            }
+            return;
         }
 
-        return () => clearInterval(timerRef.current);
+        const intervalId = setInterval(() => {
+            setTimeLeft((prev) => prev - 1);
+        }, 1000);
+
+        return () => clearInterval(intervalId);
     }, [isActive, timeLeft]);
 
     const handleTimerComplete = () => {
@@ -142,9 +187,9 @@ function PomodoroTimer() {
     };
 
     const playNotification = () => {
-        if (soundEnabled) {
-            const audio = new Audio('https://actions.google.com/sounds/v1/alarms/beep_short.ogg');
-            audio.play().catch(e => console.log('Audio play failed', e));
+        if (soundEnabled && audioRef.current) {
+            audioRef.current.currentTime = 0;
+            audioRef.current.play().catch(e => console.log('Audio play failed', e));
         }
     };
 
@@ -154,12 +199,13 @@ function PomodoroTimer() {
         return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
     };
 
-    const getProgress = () => {
+    // Memoized progress calculation
+    const progress = useMemo(() => {
         const total = mode === MODES.WORK ? workTime * 60
             : mode === MODES.SHORT_BREAK ? shortBreakTime * 60
                 : longBreakTime * 60;
         return ((total - timeLeft) / total) * 100;
-    };
+    }, [mode, workTime, shortBreakTime, longBreakTime, timeLeft]);
 
     return (
         <div className="bg-card w-full max-w-2xl mx-auto rounded-3xl shadow-2xl border border-border overflow-hidden relative transition-all duration-500 hover:shadow-primary/10">
@@ -181,7 +227,9 @@ function PomodoroTimer() {
                     <button onClick={() => setSoundEnabled(!soundEnabled)} className="p-2.5 hover:bg-secondary rounded-xl transition-all opacity-70 hover:opacity-100">
                         {soundEnabled ? <Volume2 size={20} /> : <VolumeX size={20} />}
                     </button>
-                    {/* Settings removed from here, direct adjustments added below */}
+                    <button onClick={() => setShowSettings(!showSettings)} className="p-2.5 hover:bg-secondary rounded-xl transition-all opacity-70 hover:opacity-100">
+                        <Settings size={20} />
+                    </button>
                 </div>
             </div>
 
@@ -217,7 +265,7 @@ function PomodoroTimer() {
                             strokeWidth="12"
                             fill="transparent"
                             strokeDasharray={2 * Math.PI * 140}
-                            strokeDashoffset={2 * Math.PI * 140 * (1 - getProgress() / 100)}
+                            strokeDashoffset={2 * Math.PI * 140 * (1 - progress / 100)}
                             className={`transition-all duration-1000 ease-linear ${mode === MODES.WORK ? 'text-primary' : 'text-blue-500'
                                 }`}
                             style={{
@@ -269,8 +317,8 @@ function PomodoroTimer() {
                         </div>
 
                         <div className={`text-sm font-bold mt-4 uppercase tracking-[0.3em] px-4 py-1.5 rounded-full border transition-all duration-300 ${isActive
-                                ? 'bg-primary/10 text-primary border-primary/20'
-                                : 'bg-secondary/50 text-muted-foreground border-white/5'
+                            ? 'bg-primary/10 text-primary border-primary/20'
+                            : 'bg-secondary/50 text-muted-foreground border-white/5'
                             }`}>
                             {isActive ? 'YÜRÜTÜLÜYOR' : 'DURAKLATILDI'}
                         </div>
@@ -321,8 +369,8 @@ function PomodoroTimer() {
                     <button
                         onClick={toggleTimer}
                         className={`p-8 rounded-3xl shadow-2xl transform hover:scale-105 active:scale-95 transition-all duration-300 text-white flex items-center justify-center relative overflow-hidden group ${isActive
-                                ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
-                                : 'bg-primary hover:bg-primary/90 shadow-primary/30'
+                            ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-500/20'
+                            : 'bg-primary hover:bg-primary/90 shadow-primary/30'
                             }`}
                     >
                         {/* Button Glow */}
@@ -362,6 +410,63 @@ function PomodoroTimer() {
                     <span className="block text-[10px] opacity-60 mt-1 font-normal bg-background/50 rounded-full px-2 py-0.5 mx-auto w-fit border border-border">{longBreakTime} dk</span>
                 </button>
             </div>
+
+            {/* Settings Modal */}
+            {showSettings && (
+                <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50 animate-in fade-in" onClick={() => setShowSettings(false)}>
+                    <div className="bg-card border border-border rounded-2xl p-6 max-w-md w-full mx-4 shadow-2xl animate-in zoom-in-95" onClick={e => e.stopPropagation()}>
+                        <div className="flex items-center justify-between mb-6">
+                            <h3 className="text-xl font-bold">⚙️ Timer Ayarları</h3>
+                            <button onClick={() => setShowSettings(false)} className="p-2 hover:bg-secondary rounded-lg transition-colors">
+                                <X size={20} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Odaklanma Süresi (dk)</label>
+                                <input
+                                    type="number"
+                                    value={workTime}
+                                    onChange={(e) => setWorkTime(Math.max(1, Math.min(120, parseInt(e.target.value) || 1)))}
+                                    className="w-full px-4 py-2 bg-secondary border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                                    min="1"
+                                    max="120"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Kısa Mola (dk)</label>
+                                <input
+                                    type="number"
+                                    value={shortBreakTime}
+                                    onChange={(e) => setShortBreakTime(Math.max(1, Math.min(30, parseInt(e.target.value) || 1)))}
+                                    className="w-full px-4 py-2 bg-secondary border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                                    min="1"
+                                    max="30"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium mb-2">Uzun Mola (dk)</label>
+                                <input
+                                    type="number"
+                                    value={longBreakTime}
+                                    onChange={(e) => setLongBreakTime(Math.max(1, Math.min(60, parseInt(e.target.value) || 1)))}
+                                    className="w-full px-4 py-2 bg-secondary border border-border rounded-xl focus:ring-2 focus:ring-primary outline-none"
+                                    min="1"
+                                    max="60"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={() => setShowSettings(false)}
+                            className="w-full mt-6 py-3 bg-primary text-primary-foreground rounded-xl font-bold hover:bg-primary/90 transition-colors"
+                        >
+                            Kaydet
+                        </button>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }
