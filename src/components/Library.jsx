@@ -69,10 +69,16 @@ function Library() {
                         getAllLibraryFolders()
                     ]);
 
-                    // Merge: Cloud metadata + local Blobs
-                    const merged = mergeLibraryData(localArticles, cloudArticles);
-                    setResources(merged || []);
-                    setFolders(cloudFolders.length > 0 ? cloudFolders : localFolders || []);
+                    if (cloudArticles.length > 0 || cloudFolders.length > 0) {
+                        console.log('📥 Downloaded from cloud:', { articles: cloudArticles.length, folders: cloudFolders.length });
+                        const merged = await mergeLibraryData(localArticles, cloudArticles);
+                        setResources(merged || []);
+                        setFolders(cloudFolders.length > 0 ? cloudFolders : localFolders || []);
+                    } else {
+                        // If no cloud data, use local data
+                        setResources(localArticles || []);
+                        setFolders(localFolders || []);
+                    }
                 } else {
                     // Not authenticated - local only
                     setResources(localArticles || []);
@@ -90,13 +96,18 @@ function Library() {
         }
     };
 
-    // Merge helper
-    const mergeLibraryData = (local, cloud) => {
+    // Merge helper with download support
+    const mergeLibraryData = async (local, cloud) => {
         const map = new Map();
+
+        // Start with cloud data
         cloud.forEach(c => map.set(c.id, { ...c }));
+
+        // Merge with local data (preserve local Blobs)
         local.forEach(l => {
             if (map.has(l.id)) {
                 const existing = map.get(l.id);
+                // Keep local Blobs if they exist
                 existing.fileBlob = l.fileBlob || null;
                 existing.audioFile = l.audioFile || null;
                 existing.videoFile = l.videoFile || null;
@@ -104,7 +115,27 @@ function Library() {
                 map.set(l.id, l);
             }
         });
-        return Array.from(map.values());
+
+        // Download missing files from cloud URLs
+        const merged = Array.from(map.values());
+        const downloadPromises = merged.map(async (article) => {
+            // Download PDF if we have URL but no local Blob
+            if (article.fileURL && !article.fileBlob) {
+                try {
+                    console.log('📥 Downloading PDF:', article.title);
+                    const response = await fetch(article.fileURL);
+                    if (response.ok) {
+                        article.fileBlob = await response.blob();
+                        console.log('✅ Downloaded:', article.title);
+                    }
+                } catch (err) {
+                    console.warn('Download failed for:', article.title, err);
+                }
+            }
+            return article;
+        });
+
+        return await Promise.all(downloadPromises);
     };
 
     // Initialize session state when resource is selected
