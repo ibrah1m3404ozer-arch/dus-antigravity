@@ -57,7 +57,7 @@ export async function uploadToSupabaseStorage(file, path) {
         if (!user) throw new Error('User not authenticated');
 
         const filePath = `${user.id}/${path}`;
-        console.log('📤 Uploading to:', fil ePath);
+        console.log('📤 Uploading to:', filePath);
 
         const { data, error } = await supabase.storage
             .from('articles')
