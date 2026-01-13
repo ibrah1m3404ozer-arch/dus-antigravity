@@ -389,6 +389,21 @@ export const getStudySessions = async () => {
     const db = await initDB();
     return db.getAll(STUDY_SESSION_STORE);
 };
+export const deleteStudySession = async (id) => {
+    const db = await initDB();
+    await db.delete(STUDY_SESSION_STORE, id);
+
+    // Also delete from Firestore if logged in
+    if (auth.currentUser && !auth.currentUser.isAnonymous) {
+        try {
+            const { deleteDoc, doc } = await import('firebase/firestore');
+            const { db: firestoreDb } = await import('./firebaseConfig');
+            await deleteDoc(doc(firestoreDb, `users/${auth.currentUser.uid}/study_sessions`, id));
+        } catch (error) {
+            console.warn('Failed to delete from Firestore:', error);
+        }
+    }
+};
 
 // --- Fitness Helpers ---
 export const getFitnessWorkouts = async () => {

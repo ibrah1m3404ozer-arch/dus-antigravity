@@ -8,6 +8,8 @@ import {
     getDocs,
     deleteDoc,
     query,
+    orderBy,
+    limit,
     onSnapshot,
     writeBatch
 } from 'firebase/firestore';
@@ -176,3 +178,36 @@ export const getAllLibraryQuestions = () => firebaseDB.getAll(COLLECTIONS.LIBRAR
 export const deleteLibraryQuestion = (id) => firebaseDB.delete(COLLECTIONS.LIBRARY_QUESTIONS, id);
 
 export { COLLECTIONS, storage };
+
+// Study Sessions Listener
+export const listenToStudySessions = (callback) => {
+    const listener = async () => {
+        await authReady;
+
+        if (!auth.currentUser || auth.currentUser.isAnonymous) {
+            callback([]); // Anonymous users use local storage only
+            return () => { };
+        }
+
+        const q = query(
+            collection(db, `users/${auth.currentUser.uid}/study_sessions`),
+            orderBy('timestamp', 'desc'),
+            limit(100)
+        );
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const sessions = snapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+            }));
+            callback(sessions);
+        }, (error) => {
+            console.error('Study sessions listener error:', error);
+            callback([]);
+        });
+
+        return unsubscribe;
+    };
+
+    return listener();
+};

@@ -1,9 +1,10 @@
 import React, { useMemo, useState, useEffect } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import { STATUS_CONFIG } from '../utils/data';
-import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp } from 'lucide-react';
-import { getPearls, togglePearlFavorite, savePearl, getStudySessions } from '../utils/db';
+import { Trophy, BookOpen, CheckCircle, Brain, ChevronLeft, ChevronRight, Star, ExternalLink, CalendarClock, Quote, Clock, TrendingUp, Trash2 } from 'lucide-react';
+import { getPearls, togglePearlFavorite, savePearl, getStudySessions, deleteStudySession } from '../utils/db';
+import { listenToStudySessions } from '../utils/firebaseDB';
 
 function Dashboard() {
     const { data } = useStudyData();
@@ -44,18 +45,26 @@ function Dashboard() {
         };
         loadPearls();
 
-        // Load Study Sessions with polling for realtime-like updates
-        const loadSessions = async () => {
-            setSessionsLoading(true);
-            const sessions = await getStudySessions();
-            setStudySessions(sessions);
-            setSessionsLoading(false);
+        // Load Study Sessions with Firestore realtime listener
+        let unsubscribe = () => { };
+        const initListener = async () => {
+            try {
+                unsubscribe = await listenToStudySessions((sessions) => {
+                    setStudySessions(sessions);
+                    setSessionsLoading(false);
+                });
+            } catch (error) {
+                console.warn('Firestore listener failed, using local:', error);
+                const sessions = await getStudySessions();
+                setStudySessions(sessions);
+                setSessionsLoading(false);
+            }
         };
-        loadSessions();
+        initListener();
 
-        // Poll every 30 seconds for new sessions
-        const interval = setInterval(loadSessions, 30000);
-        return () => clearInterval(interval);
+        return () => {
+            if (unsubscribe) unsubscribe();
+        };
     }, []);
 
     // Combine pearls logic...(Keep existing logic)
@@ -378,11 +387,43 @@ function Dashboard() {
                     </div>
 
                     {sessionsLoading ? (
-                        <div className="text-center py-12 text-muted-foreground">
-                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-3"></div>
-                            <p className="text-sm">Yükleniyor...</p>
+                        <div className="space-y-3">
+                            {[1, 2, 3].map(i => (
+                                <div key={i} className="animate-pulse">
+                                    <div className="h-16 bg-secondary/30 rounded-lg"></div>
+                                </div>
+                            ))}
                         </div>
                     ) : (() => {
+                        // Streak calculation
+                        const calculateStreak = () => {
+                            if (studySessions.length === 0) return 0;
+
+                            const sortedDates = studySessions
+                                .map(s => new Date(s.timestamp).toDateString())
+                                .filter((date, idx, arr) => arr.indexOf(date) === idx)
+                                .sort((a, b) => new Date(b) - new Date(a));
+
+                            let streak = 1;
+                            const today = new Date().toDateString();
+                            const yesterday = new Date(Date.now() - 86400000).toDateString();
+
+                            if (sortedDates[0] !== today && sortedDates[0] !== yesterday) return 0;
+
+                            for (let i = 1; i < sortedDates.length; i++) {
+                                const prev = new Date(sortedDates[i - 1]);
+                                const curr = new Date(sortedDates[i]);
+                                const diffDays = Math.round((prev - curr) / (1000 * 60 * 60 * 24));
+
+                                if (diffDays === 1) streak++;
+                                else break;
+                            }
+
+                            return streak;
+                        };
+
+                        const streak = calculateStreak();
+
                         // Filter sessions
                         const now = new Date();
                         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -400,7 +441,7 @@ function Dashboard() {
                                 }
                             })
                             .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp))
-                            .slice(0, 100); // Limit to 100
+                            .slice(0, 100);
 
                         // Calculate stats
                         const totalMinutes = filtered.reduce((sum, s) => sum + s.duration, 0);
@@ -416,8 +457,29 @@ function Dashboard() {
                             .sort((a, b) => b[1] - a[1])
                             .slice(0, 5);
 
+                        const chartData = topSubjects.map(([subject, minutes]) => ({
+                            subject: subject.length > 12 ? subject.substring(0, 12) + '...' : subject,
+                            fullSubject: subject,
+                            minutes
+                        }));
+
+                        const handleDeleteSession = async (sessionId) => {
+                            if (confirm('Bu oturumu silmek istediğinden emin misin?')) {
+                                await deleteStudySession(sessionId);
+                            }
+                        };
+
                         return (
                             <>
+                                {/* Streak Display */}
+                                {streak > 0 && (
+                                    <div className="bg-gradient-to-r from-orange-500/10 to-red-500/10 border border-orange-500/20 rounded-xl p-3 mb-4">
+                                        <p className="text-sm font-bold text-orange-400 flex items-center gap-2">
+                                            🔥 Streak: {streak} gün arka arkaya çalıştın!
+                                        </p>
+                                    </div>
+                                )}
+
                                 {/* Stats Summary */}
                                 <div className="grid grid-cols-2 gap-4 mb-6">
                                     <div className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 rounded-xl p-4 border border-blue-500/20">
@@ -425,8 +487,8 @@ function Dashboard() {
                                         <p className="text-xs text-muted-foreground font-semibold">Oturum</p>
                                     </div>
                                     <div className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 rounded-xl p-4 border border-emerald-500/20">
-                                        <p className="text-lg font-black text-emerald-400">{hours}s {mins}dk</p>
-                                        <p className="text-xs text-muted-foreground font-semibold">Toplam Çalışma</p>
+                                        <p className="text-xs text-muted-foreground font-semibold mb-1">Toplam Çalışma</p>
+                                        <p className="text-2xl font-black text-emerald-400">{hours}:{mins.toString().padStart(2, '0')}</p>
                                     </div>
                                 </div>
 
@@ -434,21 +496,26 @@ function Dashboard() {
                                 {filtered.length > 0 ? (
                                     <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
                                         {filtered.slice(0, 50).map(session => (
-                                            <div key={session.id} className="flex items-center justify-between p-3 bg-secondary/30 hover:bg-secondary/50 rounded-lg transition-colors border border-border/50">
+                                            <div key={session.id} className="flex items-center justify-between p-3 bg-secondary/30 hover:bg-secondary/50 rounded-lg transition-colors border border-border/50 group">
                                                 <div className="flex-1">
                                                     <p className="font-semibold text-sm">{session.subject}</p>
                                                     <p className="text-xs text-muted-foreground">
-                                                        {new Date(session.timestamp).toLocaleString('tr-TR', {
-                                                            day: '2-digit',
-                                                            month: 'short',
-                                                            hour: '2-digit',
-                                                            minute: '2-digit'
-                                                        })}
+                                                        {new Date(session.timestamp).toLocaleDateString('tr-TR', { dateStyle: 'short' })} {' '}
+                                                        {new Date(session.timestamp).toLocaleTimeString('tr-TR', { timeStyle: 'short' })}
                                                     </p>
                                                 </div>
-                                                <div className="flex items-center gap-2">
-                                                    <Clock size={14} className="text-primary" />
-                                                    <span className="text-sm font-bold text-primary">{session.duration} dk</span>
+                                                <div className="flex items-center gap-3">
+                                                    <div className="flex items-center gap-2">
+                                                        <Clock size={14} className="text-primary" />
+                                                        <span className="text-sm font-bold text-primary">{session.duration} dk</span>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => handleDeleteSession(session.id)}
+                                                        className="p-2 opacity-0 group-hover:opacity-100 hover:bg-red-500/10 rounded-lg text-muted-foreground hover:text-red-500 transition-all"
+                                                        title="Sil"
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))}
@@ -466,26 +533,32 @@ function Dashboard() {
                                     </div>
                                 )}
 
-                                {/* Top Subjects */}
+                                {/* Top Subjects with Bar Chart */}
                                 {topSubjects.length > 0 && (
                                     <div className="mt-6 pt-6 border-t border-border">
                                         <div className="flex items-center gap-2 mb-4">
                                             <TrendingUp size={16} className="text-amber-500" />
                                             <p className="text-xs font-black text-muted-foreground uppercase tracking-wider">En Çok Çalışılan</p>
                                         </div>
-                                        <div className="space-y-2">
-                                            {topSubjects.map(([subject, minutes], idx) => (
-                                                <div key={subject} className="flex items-center justify-between text-sm group">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="w-5 h-5 rounded-full bg-primary/20 text-primary text-xs font-bold flex items-center justify-center">
-                                                            {idx + 1}
-                                                        </span>
-                                                        <span className="group-hover:text-primary transition-colors">{subject}</span>
-                                                    </div>
-                                                    <span className="font-bold text-primary">{minutes} dk</span>
-                                                </div>
-                                            ))}
-                                        </div>
+                                        <ResponsiveContainer width="100%" height={150}>
+                                            <BarChart data={chartData} layout="vertical">
+                                                <XAxis type="number" hide />
+                                                <YAxis type="category" dataKey="subject" width={80} style={{ fontSize: 10 }} />
+                                                <Tooltip
+                                                    contentStyle={{
+                                                        backgroundColor: '#1e293b',
+                                                        border: 'none',
+                                                        borderRadius: '8px',
+                                                        fontSize: '12px'
+                                                    }}
+                                                    formatter={(value, name, props) => [
+                                                        `${value} dk`,
+                                                        props.payload.fullSubject
+                                                    ]}
+                                                />
+                                                <Bar dataKey="minutes" fill="#10b981" radius={[0, 4, 4, 0]} />
+                                            </BarChart>
+                                        </ResponsiveContainer>
                                     </div>
                                 )}
                             </>
