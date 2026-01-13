@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useStudyData } from '../hooks/useStudyData';
 import TopicCard from './TopicCard';
 import { Search } from 'lucide-react';
+import { getStudySessions } from '../utils/db';
 
 function Curriculum() {
     const { data, updateTopicStatus, updateTopicNote, addImage, removeImage } = useStudyData();
@@ -9,6 +10,7 @@ function Curriculum() {
     const [searchQuery, setSearchQuery] = useState('');
     const [debouncedSearch, setDebouncedSearch] = useState('');
     const [savedExpandedState, setSavedExpandedState] = useState({ saved: false, state: {} });
+    const [studySessions, setStudySessions] = useState([]);
 
     // Debounce search input (300ms)
     useEffect(() => {
@@ -17,6 +19,24 @@ function Curriculum() {
         }, 300);
         return () => clearTimeout(timer);
     }, [searchQuery]);
+
+    // Load study sessions
+    useEffect(() => {
+        const loadSessions = async () => {
+            const sessions = await getStudySessions();
+            setStudySessions(sessions);
+        };
+        loadSessions();
+
+        const handleSessionSaved = () => {
+            loadSessions();
+        };
+        window.addEventListener('study-session-saved', handleSessionSaved);
+
+        return () => {
+            window.removeEventListener('study-session-saved', handleSessionSaved);
+        };
+    }, []);
 
     // Save/restore expanded state when searching
     useEffect(() => {
@@ -56,6 +76,27 @@ function Curriculum() {
             </>
         );
     };
+
+    // Format study time
+    const formatStudyTime = (minutes) => {
+        if (minutes === 0) return null;
+
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+
+        if (hours === 0) return `${mins} dk`;
+        return mins > 0 ? `${hours}s ${mins}dk` : `${hours}s`;
+    };
+
+    // Calculate topic totals
+    const topicTotals = useMemo(() => {
+        const totals = {};
+        studySessions.forEach(session => {
+            const topic = session.subject;
+            totals[topic] = (totals[topic] || 0) + session.duration;
+        });
+        return totals;
+    }, [studySessions]);
 
     const toggleSubject = (subjectId) => {
         setExpandedSubjects(prev => ({
@@ -115,8 +156,15 @@ function Curriculum() {
                                                     {debouncedSearch ? highlightText(subject.title, debouncedSearch) : subject.title}
                                                 </h4>
                                             </div>
-                                            <div className="text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
-                                                {getProgress(subject.topics)} Tamamlandı
+                                            <div className="flex items-center gap-3">
+                                                {topicTotals[subject.title] > 0 && (
+                                                    <span className="text-xs text-emerald-400 font-bold px-2 py-1 bg-emerald-500/10 rounded-full border border-emerald-500/20">
+                                                        📊 {formatStudyTime(topicTotals[subject.title])}
+                                                    </span>
+                                                )}
+                                                <div className="text-sm text-muted-foreground bg-secondary/50 px-3 py-1 rounded-full">
+                                                    {getProgress(subject.topics)} Tamamlandı
+                                                </div>
                                             </div>
                                         </button>
 
@@ -129,6 +177,8 @@ function Curriculum() {
                                                             topic={topic}
                                                             searchQuery={debouncedSearch}
                                                             highlightText={highlightText}
+                                                            studyTime={topicTotals[topic.title] || 0}
+                                                            formatStudyTime={formatStudyTime}
                                                             onStatusChange={updateTopicStatus}
                                                             onNoteUpdate={updateTopicNote}
                                                             onAddImage={addImage}

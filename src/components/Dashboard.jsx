@@ -179,6 +179,47 @@ function Dashboard() {
         return remainingMinutes > 0 ? `${hours} saat ${remainingMinutes} dk önce` : `${hours} saat önce`;
     };
 
+    // Format study time
+    const formatStudyTime = (minutes) => {
+        if (minutes === 0) return 'Henüz çalışılmadı';
+
+        const hours = Math.floor(minutes / 60);
+        const mins = minutes % 60;
+
+        if (hours === 0) return `${mins} dk`;
+        return mins > 0 ? `${hours} saat ${mins} dk` : `${hours} saat`;
+    };
+
+    // Calculate topic totals
+    const topicTotals = useMemo(() => {
+        const totals = {};
+        studySessions.forEach(session => {
+            const topic = session.subject;
+            totals[topic] = (totals[topic] || 0) + session.duration;
+        });
+        return totals;
+    }, [studySessions]);
+
+    // Top 5 topics
+    const topicStats = useMemo(() => {
+        return Object.entries(topicTotals)
+            .sort((a, b) => b[1] - a[1]);
+    }, [topicTotals]);
+
+    // Chart data for top 5
+    const topicChartData = useMemo(() => {
+        return topicStats.slice(0, 5).map(([topic, minutes]) => ({
+            topic: topic.length > 12 ? topic.substring(0, 12) + '...' : topic,
+            fullTopic: topic,
+            minutes
+        }));
+    }, [topicStats]);
+
+    // Other topics total
+    const otherTopicsTotal = useMemo(() => {
+        return topicStats.slice(5).reduce((sum, [, minutes]) => sum + minutes, 0);
+    }, [topicStats]);
+
     return (
         <div className="space-y-8 animate-in fade-in duration-500 pb-20">
             {/* Header / Welcome Section */}
@@ -237,8 +278,8 @@ function Dashboard() {
 
             {/* Sync Status Indicator */}
             <div className={`rounded-xl p-4 border ${isOnline
-                    ? 'bg-emerald-500/10 border-emerald-500/20'
-                    : 'bg-amber-500/10 border-amber-500/20'
+                ? 'bg-emerald-500/10 border-emerald-500/20'
+                : 'bg-amber-500/10 border-amber-500/20'
                 } transition-colors`}>
                 <div className="flex items-center gap-3">
                     {isOnline ? (
@@ -661,6 +702,82 @@ function Dashboard() {
                     {toast.message}
                 </div>
             )}
+
+            {/* Topic-Based Study Times Card */}
+            <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
+                <h3 className="text-lg font-bold flex items-center gap-2 mb-6">
+                    <BookOpen className="w-5 h-5 text-primary" />
+                    Konu Bazlı Çalışma
+                </h3>
+
+                {sessionsLoading ? (
+                    <div className="space-y-3">
+                        {[1, 2, 3, 4, 5].map(i => (
+                            <div key={i} className="h-8 bg-secondary/50 rounded animate-pulse" />
+                        ))}
+                    </div>
+                ) : topicStats.length > 0 ? (
+                    <>
+                        {/* Top 5 List */}
+                        <div className="space-y-3 mb-6">
+                            {topicStats.slice(0, 5).map(([topic, minutes], idx) => (
+                                <div key={topic} className="flex justify-between items-center p-2 rounded-lg hover:bg-accent/5 transition-colors">
+                                    <span className="flex items-center gap-2">
+                                        <span className="w-6 h-6 rounded-full bg-primary/10 text-primary font-bold text-sm flex items-center justify-center">
+                                            {idx + 1}
+                                        </span>
+                                        <span className="font-medium">{topic}</span>
+                                    </span>
+                                    <span className="text-sm font-bold text-primary">
+                                        {formatStudyTime(minutes)}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Other Topics Summary */}
+                        {otherTopicsTotal > 0 && (
+                            <div className="mb-6 p-3 bg-secondary/20 rounded-xl border border-dashed border-border">
+                                <p className="text-sm text-muted-foreground text-center">
+                                    Diğer konular toplam: <span className="font-bold text-foreground">{formatStudyTime(otherTopicsTotal)}</span>
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Bar Chart */}
+                        <ResponsiveContainer width="100%" height={200}>
+                            <BarChart data={topicChartData} layout="vertical" margin={{ left: -20 }}>
+                                <XAxis type="number" hide />
+                                <YAxis
+                                    type="category"
+                                    dataKey="topic"
+                                    width={80}
+                                    style={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+                                />
+                                <Tooltip
+                                    formatter={(value) => formatStudyTime(value)}
+                                    labelFormatter={(label, payload) => {
+                                        const item = payload && payload[0];
+                                        return item ? item.payload.fullTopic : label;
+                                    }}
+                                    contentStyle={{
+                                        backgroundColor: 'var(--card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '8px'
+                                    }}
+                                />
+                                <Bar dataKey="minutes" fill="#10b981" radius={[0, 8, 8, 0]} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    </>
+                ) : (
+                    <div className="text-center py-12 text-muted-foreground">
+                        <BookOpen className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p className="font-medium">Henüz çalışma yok</p>
+                        <p className="text-sm">Pomodoro ile başla!</p>
+                    </div>
+                )}
+            </div>
         </div>
     );
 }
